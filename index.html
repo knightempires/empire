@@ -1135,7 +1135,9 @@
       viewingGoalsUserId = userId;
       document.getElementById("goal-add-card").style.display = "";
       loadGoalsFor(userId);
+      loadDailyPlan();
     };
+    
     document.getElementById("goals-switch-buddy").onclick = function() {
       if (!buddyId) {
         discoverBuddy().then(function() {
@@ -1145,6 +1147,7 @@
           viewingGoalsUserId = buddyId;
           document.getElementById("goal-add-card").style.display = "none";
           loadGoalsFor(buddyId);
+          loadDailyPlan();
         });
         return;
       }
@@ -1153,6 +1156,7 @@
       viewingGoalsUserId = buddyId;
       document.getElementById("goal-add-card").style.display = "none";
       loadGoalsFor(buddyId);
+      loadDailyPlan();
     };
 
     document.querySelectorAll(".sub-tab").forEach(function(tab) {
@@ -1165,42 +1169,87 @@
       };
     });
 
-    /* DAILY PLAN */
-    function loadDailyPlan() {
-      var key = "dailyPlan_" + userId + "_" + new Date().toISOString().slice(0, 10);
+    /* DAILY PLAN (FIRESTORE SYNC) */
+    async function loadDailyPlan() {
+      const today = new Date().toISOString().slice(0, 10);
+      const targetUid = viewingGoalsUserId || userId; // Uses selected user (you or buddy)
+      
+      const el = document.getElementById("daily-plan");
+      const empty = document.getElementById("plan-empty");
+      const btnGen = document.getElementById("btn-gen-plan");
+      
+      // Hide generate button if viewing buddy's plan
+      if (btnGen) {
+        btnGen.style.display = (targetUid === userId) ? "" : "none";
+      }
+
       try {
-        var saved = localStorage.getItem(key);
-        if (saved) { dailyPlanItems = JSON.parse(saved); renderDailyPlan(); }
-      } catch (e) {}
+        const docRef = db.collection("dailyPlans").doc(`${targetUid}_${today}`);
+        const snap = await docRef.get();
+        if (snap.exists) {
+          dailyPlanItems = snap.data().items || [];
+        } else {
+          dailyPlanItems = [];
+        }
+        renderDailyPlan();
+      } catch (e) {
+        console.warn("Error loading daily plan:", e);
+      }
     }
-    function saveDailyPlan() {
-      var key = "dailyPlan_" + userId + "_" + new Date().toISOString().slice(0, 10);
-      try { localStorage.setItem(key, JSON.stringify(dailyPlanItems)); } catch (e) {}
+
+    async function saveDailyPlan() {
+      const today = new Date().toISOString().slice(0, 10);
+      const docRef = db.collection("dailyPlans").doc(`${userId}_${today}`);
+      try {
+        await docRef.set({
+          userId: userId,
+          date: today,
+          items: dailyPlanItems,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (e) {
+        console.error("Error saving daily plan:", e);
+      }
     }
+
     function renderDailyPlan() {
       var el = document.getElementById("daily-plan");
       var empty = document.getElementById("plan-empty");
-      if (!dailyPlanItems.length) { el.innerHTML = ""; empty.classList.remove("hidden"); return; }
+      var isOwner = (viewingGoalsUserId === userId);
+
+      if (!dailyPlanItems.length) { 
+        el.innerHTML = ""; 
+        empty.classList.remove("hidden"); 
+        return; 
+      }
       empty.classList.add("hidden");
+
       el.innerHTML = dailyPlanItems.map(function(item, idx) {
+        var checkAction = isOwner ? `onclick="togglePlanItem(${idx})"` : '';
         return '<div class="plan-item">' +
-          '<div class="plan-check ' + (item.done ? "done" : "") + '" onclick="togglePlanItem(' + idx + ')"></div>' +
+          '<div class="plan-check ' + (item.done ? "done" : "") + '" ' + checkAction + '></div>' +
           '<div style="flex:1;font-weight:700;color:var(--navy);' + (item.done ? "opacity:0.5;text-decoration:line-through" : "") + '">' +
           escapeHtml(item.text) + '</div></div>';
       }).join("");
     }
-    window.togglePlanItem = function(idx) {
+
+    window.togglePlanItem = async function(idx) {
+      if (viewingGoalsUserId !== userId) return; // Only owner can check off items
       if (!dailyPlanItems[idx]) return;
+      
       dailyPlanItems[idx].done = !dailyPlanItems[idx].done;
-      saveDailyPlan();
       renderDailyPlan();
+      await saveDailyPlan();
+
       if (dailyPlanItems[idx].done && dailyPlanItems.every(function(i) { return i.done; })) {
         toast("Весь план дня выполнен! +25 XP");
         db.collection("users").doc(userId).update({ xp: firebase.firestore.FieldValue.increment(25) });
         showCongrats("План дня выполнен", 25);
       }
     };
+
     document.getElementById("btn-gen-plan").onclick = async function() {
+      if (viewingGoalsUserId !== userId) return toast("Нельзя генерировать план для напарника.");
       var btn = document.getElementById("btn-gen-plan");
       btn.disabled = true; btn.textContent = "Составляю...";
       try {
@@ -1228,7 +1277,8 @@
         var text = await callGemini(prompt);
         var arr = JSON.parse(text);
         dailyPlanItems = (Array.isArray(arr) ? arr : []).map(function(t) { return { text: String(t), done: false }; });
-        saveDailyPlan();
+        
+        await saveDailyPlan();
         renderDailyPlan();
         toast("План дня готов!");
       } catch (e) {
