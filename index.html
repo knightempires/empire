@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Forge Quest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --bg: #0a0e17; --bg-elevated: #121826; --card: #ffffff; --card-soft: #f5f7fb;
+      --primary: #ff8a5b; --primary-dark: #e8744a; --primary-soft: #ffe8de;
+      --navy: #1a2236; --text: #1a2236; --text-on-dark: #f0f2f7; --muted: #8b95a8;
+      --border: #e8ecf4; --main: #5b8def; --side: #ffb347; --daily: #6bcb9a;
+      --shadow: 0 10px 30px rgba(10,14,23,0.12); --radius: 22px; --radius-sm: 14px; --nav-h: 74px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -ms-overflow-style: none; scrollbar-width: none; }
+    *::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+    html, body { overflow-x: hidden; }
+    body {
+      font-family: 'Nunito', system-ui, sans-serif; background: var(--bg); color: var(--text-on-dark);
+      min-height: 100vh; padding-bottom: calc(var(--nav-h) + 18px); line-height: 1.45;
+      overscroll-behavior: none; font-weight: 600;
+    }
+    .app-header { background: var(--bg); padding: 20px 20px 14px; position: sticky; top: 0; z-index: 40; }
+    .app-header h1 { font-size: 1.4rem; font-weight: 900; letter-spacing: -0.03em; color: #fff; }
+    .app-header .sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; font-weight: 700; }
+    .screen { display: none; padding: 8px 16px 20px; max-width: 520px; margin: 0 auto; }
+    .screen.active { display: block; animation: fadeIn 0.22s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .card {
+      background: var(--card); color: var(--text); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 0.95rem; font-weight: 800; color: var(--navy);
+      margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      border: none; border-radius: 999px; padding: 13px 20px; font-family: inherit;
+      font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: transform 0.15s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 6px 18px rgba(255,138,91,0.4); }
+    .btn-accent { background: var(--navy); color: #fff; }
+    .btn-outline { background: transparent; border: 2px solid var(--navy); color: var(--navy); }
+    .btn-ghost { background: var(--card-soft); color: var(--navy); }
+    .btn-block { width: 100%; }
+    .btn-sm { padding: 9px 14px; font-size: 0.8rem; }
+    .btn:disabled { opacity: 0.5; pointer-events: none; }
+    .level-ring {
+      width: 84px; height: 84px; border-radius: 50%;
+      background: conic-gradient(var(--primary) var(--pct, 0%), #eef1f7 0);
+      display: grid; place-items: center; position: relative;
+    }
+    .level-ring::before { content: ''; position: absolute; inset: 7px; background: #fff; border-radius: 50%; }
+    .level-num { position: relative; z-index: 1; font-size: 1.5rem; font-weight: 900; color: var(--navy); }
+    .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.88rem; font-weight: 700; }
+    .stat-bar { flex: 1; height: 10px; background: #eef1f7; border-radius: 6px; margin: 0 12px; overflow: hidden; }
+    .stat-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--primary), #ffb347); }
+    .xp-text { font-weight: 800; color: var(--primary); font-size: 0.88rem; }
+    .user-switcher, .quest-tabs, .sub-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .user-switch-btn, .quest-tab, .sub-tab {
+      flex: 1; padding: 11px 10px; border-radius: 999px; font-family: inherit;
+      font-weight: 800; font-size: 0.8rem; background: var(--bg-elevated);
+      color: var(--muted); border: 2px solid transparent; cursor: pointer; text-align: center;
+    }
+    .quest-tab { flex: 0 0 auto; padding: 10px 16px; }
+    .user-switch-btn.active, .quest-tab.active, .sub-tab.active {
+      background: #fff; color: var(--navy); box-shadow: var(--shadow);
+    }
+    .quest-item {
+      background: #fff; border-radius: var(--radius); padding: 18px; margin-bottom: 12px;
+      box-shadow: var(--shadow); position: relative; overflow: hidden;
+    }
+    .quest-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
+    .quest-item.main::before { background: var(--main); }
+    .quest-item.side::before { background: var(--side); }
+    .quest-item.daily::before { background: var(--daily); }
+    .quest-item.completed { opacity: 0.55; }
+    .quest-cat {
+      display: inline-block; font-size: 0.68rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: 0.04em; padding: 4px 10px; border-radius: 999px; margin-bottom: 8px;
+    }
+    .quest-item.main .quest-cat { background: #e8f0ff; color: var(--main); }
+    .quest-item.side .quest-cat { background: #fff4e0; color: #d4890a; }
+    .quest-item.daily .quest-cat { background: #e6f8ef; color: #2d9b6a; }
+    .quest-title { font-weight: 900; font-size: 1.08rem; margin-bottom: 8px; color: var(--navy); }
+    .quest-desc { font-size: 0.88rem; color: #4a5568; margin-bottom: 12px; line-height: 1.55; font-weight: 600; }
+    .quest-desc ul { margin: 8px 0 0; padding-left: 18px; }
+    .quest-desc li { margin-bottom: 4px; }
+    .quest-location {
+      display: flex; align-items: center; gap: 6px; font-size: 0.8rem;
+      font-weight: 800; color: var(--primary); margin-bottom: 12px;
+    }
+    .quest-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .xp-badge {
+      background: var(--primary-soft); color: var(--primary-dark);
+      font-weight: 900; font-size: 0.8rem; padding: 6px 12px; border-radius: 999px;
+    }
+    textarea, input[type="text"] {
+      width: 100%; padding: 14px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 0.95rem; font-family: inherit; font-weight: 600; background: var(--card-soft); color: var(--text);
+    }
+    textarea { resize: vertical; }
+    textarea:focus, input:focus { outline: none; border-color: var(--primary); background: #fff; }
+    .log-entry { border-bottom: 1px solid var(--border); padding: 14px 0; }
+    .log-entry:last-child { border-bottom: none; }
+    .log-author { font-weight: 800; color: var(--navy); font-size: 0.9rem; }
+    .log-time { font-size: 0.72rem; color: var(--muted); font-weight: 700; }
+    .log-body { margin-top: 6px; font-size: 0.9rem; white-space: pre-wrap; color: #3d4659; font-weight: 600; }
+    .stream-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .stream-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), #ffb347);
+      display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 1rem; flex-shrink: 0;
+    }
+    .respect-btn {
+      margin-top: 6px; font-size: 0.78rem; font-weight: 800; color: var(--primary);
+      background: none; border: none; cursor: pointer; padding: 0; font-family: inherit;
+    }
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; height: var(--nav-h);
+      background: #fff; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-around; align-items: center; z-index: 50;
+      box-shadow: 0 -8px 28px rgba(10,14,23,0.08); padding-bottom: env(safe-area-inset-bottom);
+      border-radius: 22px 22px 0 0;
+    }
+    .nav-item {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      background: none; border: none; cursor: pointer; color: var(--muted);
+      font-size: 0.62rem; font-weight: 800; padding: 6px 6px; min-width: 56px; font-family: inherit;
+    }
+    .nav-item.active { color: var(--primary); }
+    .nav-item svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
+    .perf-score { font-size: 2.6rem; font-weight: 900; color: var(--primary); text-align: center; }
+    .perf-label { text-align: center; color: var(--muted); font-size: 0.88rem; margin-bottom: 14px; font-weight: 700; }
+    .tip-item {
+      background: var(--card-soft); border-radius: 14px; padding: 14px; margin-bottom: 8px;
+      border-left: 4px solid var(--primary); font-size: 0.88rem; font-weight: 600; color: #3d4659;
+    }
+    .quote-card {
+      background: linear-gradient(135deg, #1a2236, #2a354d); color: #fff;
+      border-radius: var(--radius); padding: 20px; margin-bottom: 14px; box-shadow: var(--shadow);
+    }
+    .quote-text { font-size: 1rem; font-weight: 700; line-height: 1.55; margin-bottom: 10px; font-style: italic; }
+    .quote-author { font-size: 0.8rem; font-weight: 800; color: var(--primary); text-align: right; }
+    .attr-chip {
+      display: inline-block; background: var(--primary-soft); color: var(--primary-dark);
+      font-size: 0.78rem; font-weight: 800; padding: 6px 12px; border-radius: 999px; margin: 0 6px 8px 0;
+    }
+    .goal-item {
+      background: var(--card-soft); border-radius: 14px; padding: 14px; margin-bottom: 8px;
+      border-left: 4px solid var(--main);
+    }
+    .goal-item .goal-title { font-weight: 800; color: var(--navy); font-size: 0.95rem; }
+    .goal-item.done { opacity: 0.55; }
+    .goal-item.done .goal-title { text-decoration: line-through; }
+    .plan-item {
+      display: flex; gap: 12px; align-items: flex-start; padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .plan-check {
+      width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--primary);
+      flex-shrink: 0; margin-top: 2px; cursor: pointer; display: grid; place-items: center;
+    }
+    .plan-check.done { background: var(--primary); }
+    .plan-check.done::after { content: '✓'; color: #fff; font-size: 0.75rem; font-weight: 900; }
+    .see-all-btn {
+      display: block; width: 100%; text-align: center; padding: 12px;
+      font-family: inherit; font-weight: 800; font-size: 0.88rem; color: var(--primary);
+      background: var(--primary-soft); border: none; border-radius: 14px; cursor: pointer; margin-top: 8px;
+    }
+    .add-goal-row { display: flex; gap: 8px; margin-top: 12px; }
+    .add-goal-row input { flex: 1; }
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(10,14,23,0.72); z-index: 300;
+      display: none; align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      background: #fff; color: var(--text); width: 100%; max-width: 520px;
+      max-height: 92vh; border-radius: 24px 24px 0 0; display: flex; flex-direction: column;
+      animation: sheetUp 0.28s ease;
+    }
+    @keyframes sheetUp { from { transform: translateY(40%); opacity: 0; } to { transform: none; opacity: 1; } }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .modal-header h2 { font-size: 1.15rem; font-weight: 900; color: var(--navy); }
+    .modal-close {
+      width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--card-soft);
+      font-size: 1.2rem; font-weight: 800; cursor: pointer; color: var(--navy); font-family: inherit;
+    }
+    .modal-body { overflow-y: auto; padding: 16px 20px 32px; flex: 1; }
+    .lore-detail { background: var(--card-soft); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+    .lore-detail .key { font-weight: 900; color: var(--primary-dark); font-size: 0.88rem; margin-bottom: 4px; }
+    .lore-detail .summary { font-size: 0.88rem; color: #3d4659; font-weight: 600; line-height: 1.5; }
+    .congrats-banner {
+      background: linear-gradient(135deg, #fff4e0, #ffe8de); border-radius: 16px;
+      padding: 16px; margin-bottom: 14px; text-align: center;
+    }
+    .congrats-banner h3 { font-weight: 900; color: var(--primary-dark); font-size: 1.05rem; margin-bottom: 4px; }
+    .congrats-banner p { font-size: 0.85rem; color: #8a5a3a; font-weight: 700; }
+    .empty { text-align: center; padding: 28px 16px; color: var(--muted); font-weight: 700; }
+    .spinner {
+      width: 28px; height: 28px; border: 3px solid #e8ecf4; border-top-color: var(--primary);
+      border-radius: 50%; animation: spin 0.7s linear infinite; margin: 20px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast {
+      position: fixed; bottom: calc(var(--nav-h) + 16px); left: 50%;
+      transform: translateX(-50%) translateY(20px); background: var(--navy); color: #fff;
+      padding: 14px 22px; border-radius: 999px; font-weight: 800; font-size: 0.88rem;
+      opacity: 0; transition: all 0.3s; z-index: 400; pointer-events: none;
+      max-width: 90%; text-align: center; box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .flex { display: flex; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    .gap-8 { gap: 8px; }
+    .mt-8 { margin-top: 8px; }
+    .mt-12 { margin-top: 12px; }
+    .mb-8 { margin-bottom: 8px; }
+    .text-muted { color: var(--muted); }
+    .text-sm { font-size: 0.86rem; }
+    .hidden { display: none !important; }
+    #boot-screen {
+      position: fixed; inset: 0; background: var(--bg); z-index: 100;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff;
+    }
+    #boot-screen h1 { font-size: 1.7rem; font-weight: 900; color: var(--primary); margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div id="boot-screen">
+    <h1>Forge Quest</h1>
+    <div class="spinner"></div>
+    <p style="color:#8b95a8;font-weight:700;margin-top:12px;font-size:0.86rem">Подключение к Telegram...</p>
+  </div>
+
+  <div id="app" class="hidden">
+    <header class="app-header">
+      <h1 id="header-title">Forge Quest</h1>
+      <div class="sub" id="header-sub">Твой рост — вместе</div>
+    </header>
+
+    <!-- PROFILE -->
+    <section id="screen-profile" class="screen active">
+      <div class="card">
+        <div class="flex-between">
+          <div>
+            <div class="text-sm text-muted" style="font-weight:700">Игрок</div>
+            <div style="font-size:1.28rem;font-weight:900;color:var(--navy)" id="profile-name">—</div>
+            <div class="text-sm text-muted mt-8" id="profile-tg-id" style="font-size:0.72rem;font-weight:700"></div>
+          </div>
+          <div class="level-ring" id="level-ring" style="--pct:0%">
+            <span class="level-num" id="profile-level">1</span>
+          </div>
+        </div>
+        <div class="mt-12">
+          <div class="flex-between text-sm">
+            <span class="xp-text" id="profile-xp">0 XP</span>
+            <span class="text-muted" id="profile-next" style="font-weight:700">До уровня: 100</span>
+          </div>
+          <div class="stat-bar mt-8" style="height:12px">
+            <div class="stat-fill" id="xp-bar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 2L15 8H21L16 12L18 19L12 15L6 19L8 12L3 8H9L12 2Z"/></svg>
+          Атрибуты
+        </div>
+        <div class="stat-row"><span style="width:100px">Интеллект</span><div class="stat-bar"><div class="stat-fill" id="stat-intellect" style="width:20%"></div></div><span id="val-intellect" style="width:28px;text-align:right;font-weight:900">2</span></div>
+        <div class="stat-row"><span style="width:100px">Жизненность</span><div class="stat-bar"><div class="stat-fill" id="stat-vitality" style="width:20%"></div></div><span id="val-vitality" style="width:28px;text-align:right;font-weight:900">2</span></div>
+        <div class="stat-row"><span style="width:100px">Исследование</span><div class="stat-bar"><div class="stat-fill" id="stat-exploration" style="width:20%"></div></div><span id="val-exploration" style="width:28px;text-align:right;font-weight:900">2</span></div>
+        <div class="stat-row"><span style="width:100px">Мастерство</span><div class="stat-bar"><div class="stat-fill" id="stat-craft" style="width:20%"></div></div><span id="val-craft" style="width:28px;text-align:right;font-weight:900">2</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Память ИИ (лор)</div>
+        <div id="lore-chips"></div>
+        <div id="lore-empty" class="empty hidden" style="padding:16px">Пока пусто. Напиши запись в журнале.</div>
+        <button class="see-all-btn" id="btn-lore-detail">Подробнее</button>
+      </div>
+    </section>
+
+    <!-- QUESTS -->
+    <section id="screen-quests" class="screen">
+      <div class="user-switcher">
+        <button class="user-switch-btn active" id="switch-me">Мои квесты</button>
+        <button class="user-switch-btn" id="switch-buddy">Напарник</button>
+      </div>
+      <div class="quest-tabs">
+        <button class="quest-tab active" data-tab="active">Активные</button>
+        <button class="quest-tab" data-tab="available">Доступные</button>
+        <button class="quest-tab" data-tab="completed">Готово</button>
+      </div>
+      <button class="btn btn-primary btn-block mb-8" id="btn-generate-quest">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
+        Сгенерировать побочный квест
+      </button>
+      <div id="quest-list"></div>
+      <div id="quest-empty" class="empty hidden">В этой вкладке пока нет квестов.</div>
+    </section>
+
+    <!-- JOURNAL -->
+    <section id="screen-journal" class="screen">
+      <div class="card" style="background:var(--bg-elevated);color:var(--text-on-dark);box-shadow:none;border:1px solid #1e2638">
+        <p style="font-size:0.92rem;font-weight:700;line-height:1.55;color:#c5cde0;margin:0">
+          Пиши сюда всё важное: как прошёл квест, что получилось и что нет, новые идеи, мысли о проектах, местах и привычках. Чем подробнее — тем умнее станет ИИ.
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-title">Записать достижение</div>
+        <textarea id="journal-input" rows="5" placeholder="Что ты сделал? Например: 2 часа кодил TappyStars в кафе Tim's на Тараса Шевченко..."></textarea>
+        <button class="btn btn-primary btn-block mt-12" id="btn-submit-journal">Сохранить запись</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Последние записи</div>
+        <div id="journal-feed"></div>
+        <div id="journal-empty" class="empty hidden">Записей пока нет.</div>
+        <button class="see-all-btn hidden" id="btn-journal-all">Смотреть все записи</button>
+      </div>
+    </section>
+
+    <!-- PROGRESS -->
+    <section id="screen-performance" class="screen">
+      <div id="congrats-slot"></div>
+      <div class="card">
+        <div class="card-title">Продуктивность</div>
+        <div class="perf-score" id="perf-score">—</div>
+        <div class="perf-label" id="perf-label">На основе квестов за неделю</div>
+        <div class="flex-between text-sm mt-8" style="font-weight:700"><span class="text-muted">Закрыто за неделю</span><strong id="perf-completed">0</strong></div>
+        <div class="flex-between text-sm mt-8" style="font-weight:700"><span class="text-muted">XP за неделю</span><strong id="perf-xp">0</strong></div>
+        <div class="flex-between text-sm mt-8" style="font-weight:700"><span class="text-muted">Серия</span><strong id="perf-streak">—</strong></div>
+      </div>
+      <div class="quote-card" id="quote-card">
+        <div class="quote-text" id="quote-text">Загрузка мысли дня...</div>
+        <div class="quote-author" id="quote-author"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Что улучшить</div>
+        <div id="perf-tips"></div>
+        <div id="perf-tips-empty" class="empty hidden" style="padding:16px">Закрой больше квестов — ИИ проанализирует паттерны.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Лента активности</div>
+        <div id="activity-stream"></div>
+        <div id="stream-empty" class="empty hidden">Пока пусто.</div>
+        <button class="see-all-btn hidden" id="btn-activity-all">Смотреть всю активность</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Уважение</div>
+        <p class="text-sm text-muted mb-8" style="font-weight:600">Дай бонусный XP напарнику.</p>
+        <button class="btn btn-outline btn-block" id="btn-respect">Отправить уважение (+15 XP)</button>
+      </div>
+    </section>
+
+    <!-- GOALS (new section) -->
+    <section id="screen-goals" class="screen">
+      <div class="user-switcher">
+        <button class="user-switch-btn active" id="goals-switch-me">Мои цели</button>
+        <button class="user-switch-btn" id="goals-switch-buddy">Напарник</button>
+      </div>
+      <div class="card" id="goal-add-card">
+        <div class="card-title">Новая цель</div>
+        <p class="text-sm text-muted mb-8" style="font-weight:600">Сформулируй ясно: что именно хочешь достичь?</p>
+        <input type="text" id="goal-input" placeholder="Например: Запустить MVP TappyStars к концу месяца" />
+        <button class="btn btn-primary btn-block mt-12" id="btn-add-goal">Добавить цель</button>
+      </div>
+      <div class="sub-tabs">
+        <button class="sub-tab active" data-sub="goals-list">Цели</button>
+        <button class="sub-tab" data-sub="daily-plan">План дня</button>
+      </div>
+      <div id="sub-goals-list">
+        <div class="card">
+          <div id="goals-list"></div>
+          <div id="goals-empty" class="empty" style="padding:16px">Пока нет целей. Добавь первую сверху.</div>
+        </div>
+      </div>
+      <div id="sub-daily-plan" class="hidden">
+        <div class="card">
+          <div class="card-title">План на сегодня</div>
+          <div id="daily-plan"></div>
+          <div id="plan-empty" class="empty" style="padding:12px">Нажми кнопку — ИИ составит детальный план дня.</div>
+          <button class="btn btn-accent btn-block mt-12" id="btn-gen-plan">Сгенерировать план дня (ИИ)</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <nav class="bottom-nav hidden" id="bottom-nav">
+    <button class="nav-item active" data-screen="profile">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Профиль</span>
+    </button>
+    <button class="nav-item" data-screen="quests">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span>Квесты</span>
+    </button>
+    <button class="nav-item" data-screen="journal">
+      <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span>Журнал</span>
+    </button>
+    <button class="nav-item" data-screen="performance">
+      <svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+      <span>Прогресс</span>
+    </button>
+    <button class="nav-item" data-screen="goals">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <span>Цели</span>
+    </button>
+  </nav>
+
+  <div class="modal-overlay" id="modal-activity">
+    <div class="modal-sheet">
+      <div class="modal-header"><h2>Вся активность</h2><button class="modal-close" data-close="modal-activity">✕</button></div>
+      <div class="modal-body" id="modal-activity-body"></div>
+      <div style="padding:12px 20px 24px"><button class="btn btn-ghost btn-block" id="btn-activity-more">Загрузить ещё</button></div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-journal">
+    <div class="modal-sheet">
+      <div class="modal-header"><h2>Все записи журнала</h2><button class="modal-close" data-close="modal-journal">✕</button></div>
+      <div class="modal-body" id="modal-journal-body"></div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-lore">
+    <div class="modal-sheet">
+      <div class="modal-header"><h2>Лор и атрибуты</h2><button class="modal-close" data-close="modal-lore">✕</button></div>
+      <div class="modal-body" id="modal-lore-body"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCuupNhZpXQL_oMm7_W9nWFQRJlLNbd1b0",
+      authDomain: "selfimprovementda.firebaseapp.com",
+      projectId: "selfimprovementda",
+      storageBucket: "selfimprovementda.firebasestorage.app",
+      messagingSenderId: "227863604727",
+      appId: "1:227863604727:web:c4b128779ccd3d2d13d2f2"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const GEMINI_KEY = "AQ.Ab8RN6IUFeecvy9Q1PweOkXEVrEqkoCvMS15wa-x_aUVnAJt7A";
+    const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=" + GEMINI_KEY;
+    const tg = window.Telegram && window.Telegram.WebApp;
+
+    let tgUser = null, userId = null, userData = null;
+    let buddyId = null, buddyName = "Напарник";
+    let viewingUserId = null, viewingGoalsUserId = null, currentQuestTab = "active";
+    let unsubscribers = [], activityCache = [], activityOffset = 0, journalCache = [];
+    let dailyPlanItems = [], goalsCache = [];
+
+    function toast(msg) {
+      var el = document.getElementById("toast");
+      el.textContent = msg; el.classList.add("show");
+      setTimeout(function() { el.classList.remove("show"); }, 2800);
+    }
+    function xpForLevel(lvl) { return Math.floor(100 * Math.pow(1.35, lvl - 1)); }
+    function calcLevel(totalXp) {
+      var lvl = 1, remaining = totalXp;
+      while (remaining >= xpForLevel(lvl)) { remaining -= xpForLevel(lvl); lvl++; }
+      return { level: lvl, currentXp: remaining, needed: xpForLevel(lvl) };
+    }
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+    function formatDesc(text) {
+      if (!text) return "";
+      var lines = String(text).split(/\n+/), html = "", inList = false;
+      lines.forEach(function(line) {
+        line = line.trim(); if (!line) return;
+        if (/^[-•*]\s+/.test(line) || /^\d+\.\s+/.test(line)) {
+          if (!inList) { html += "<ul>"; inList = true; }
+          html += "<li>" + escapeHtml(line.replace(/^[-•*]\s+/, "").replace(/^\d+\.\s+/, "")) + "</li>";
+        } else {
+          if (inList) { html += "</ul>"; inList = false; }
+          html += "<p style='margin-bottom:6px'>" + escapeHtml(line) + "</p>";
+        }
+      });
+      if (inList) html += "</ul>";
+      return html || escapeHtml(text);
+    }
+    async function callGemini(prompt) {
+      var res = await fetch(GEMINI_URL, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.85, maxOutputTokens: 900 }
+        })
+      });
+      if (!res.ok) throw new Error("Gemini " + res.status);
+      var data = await res.json();
+      var text = (data.candidates && data.candidates[0] && data.candidates[0].content &&
+        data.candidates[0].content.parts && data.candidates[0].content.parts[0].text) || "";
+      return text.replace(/```json|```/g, "").trim();
+    }
+    function openModal(id) { document.getElementById(id).classList.add("open"); }
+    function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+    document.querySelectorAll("[data-close]").forEach(function(btn) {
+      btn.onclick = function() { closeModal(btn.getAttribute("data-close")); };
+    });
+    document.querySelectorAll(".modal-overlay").forEach(function(ov) {
+      ov.addEventListener("click", function(e) { if (e.target === ov) ov.classList.remove("open"); });
+    });
+
+    function getTelegramUser() {
+      if (tg) {
+        try {
+          tg.ready(); tg.expand();
+          if (tg.isVersionAtLeast && tg.isVersionAtLeast("6.1")) {
+            try { tg.setHeaderColor("#0a0e17"); } catch(e){}
+            try { tg.setBackgroundColor("#0a0e17"); } catch(e){}
+          }
+        } catch(e){}
+      }
+      var unsafe = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+      if (unsafe && unsafe.id) {
+        return { id: String(unsafe.id), first_name: unsafe.first_name || "Игрок", last_name: unsafe.last_name || "", username: unsafe.username || "" };
+      }
+      return { id: "100000001", first_name: "Тест", last_name: "Игрок", username: "test_user" };
+    }
+
+    async function ensureUserDoc(user) {
+      var ref = db.collection("users").doc(user.id);
+      var snap = await ref.get();
+      if (!snap.exists) {
+        var displayName = [user.first_name, user.last_name].filter(Boolean).join(" ") || "Игрок";
+        await ref.set({
+          name: displayName, username: user.username || "", telegramId: user.id,
+          xp: 0, intellect: 2, vitality: 2, exploration: 2, craft: 2,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await seedStarterQuests(user.id);
+        return (await ref.get()).data();
+      }
+      return snap.data();
+    }
+
+    async function seedStarterQuests(uid) {
+      var starters = [
+        { title: "Глубокий фокус 90 минут", description: "Непрерывный блок работы без отвлечений.\n\n- Выключи уведомления\n- Таймер 90 минут\n- Одна задача\n- Запиши итог", location: "Дома / коворкинг / кафе", category: "main", xp: 120, status: "available", stats: { intellect: 1, craft: 1 } },
+        { title: "Утреннее движение", description: "20 минут физической активности.\n\n- Разминка\n- Бег / зарядка / силовые\n- Отметь самочувствие", location: "Парк / двор / дома", category: "main", xp: 80, status: "available", stats: { vitality: 2 } },
+        { title: "Новое кафе в Ташкенте", description: "Зайди в кафе, где ещё не был.\n\n- Минимум 30 минут\n- Закажи что-то\n- Запиши идею", location: "Tim's Coffee на ул. Тараса Шевченко или другое", category: "side", xp: 60, status: "available", stats: { exploration: 2 } },
+        { title: "Гидратация дня", description: "Выпей ≥ 2 литров воды.\n\n- Бутылка на виду\n- Отмечай стаканы", location: "Везде", category: "daily", xp: 25, status: "available", stats: { vitality: 1 } },
+        { title: "Ежедневный коммит", description: "Один осмысленный коммит или 200 слов заметок.\n\n- Открой репозиторий\n- Закрой маленькую задачу", location: "Дома / кафе", category: "daily", xp: 35, status: "available", stats: { intellect: 1, craft: 1 } }
+      ];
+      var batch = db.batch();
+      starters.forEach(function(q) {
+        batch.set(db.collection("quests").doc(), Object.assign({}, q, {
+          ownerId: uid, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }));
+      });
+      await batch.commit();
+    }
+
+    async function discoverBuddy() {
+      var snap = await db.collection("users").get();
+      var other = snap.docs.map(function(d) { return { id: d.id, name: d.data().name || "Игрок" }; })
+        .find(function(u) { return u.id !== userId; });
+      if (other) {
+        buddyId = other.id; buddyName = other.name;
+        document.getElementById("switch-buddy").textContent = "Квесты " + buddyName;
+        document.getElementById("goals-switch-buddy").textContent = "Цели " + buddyName;
+      }
+    }
+
+    (async function boot() {
+      try {
+        tgUser = getTelegramUser();
+        userId = tgUser.id;
+        viewingUserId = userId;
+        viewingGoalsUserId = userId;
+        userData = await ensureUserDoc(tgUser);
+        await discoverBuddy();
+        document.getElementById("boot-screen").classList.add("hidden");
+        document.getElementById("app").classList.remove("hidden");
+        document.getElementById("bottom-nav").classList.remove("hidden");
+        renderProfile();
+        setupListeners();
+        loadLore();
+        loadDailyPlan();
+        refreshPerformance();
+        loadQuote();
+      } catch (err) {
+        console.error(err);
+        document.getElementById("boot-screen").innerHTML =
+          "<h1>Forge Quest</h1><p style='max-width:280px;text-align:center;margin-top:12px;color:#8b95a8;font-weight:700'>" +
+          "Не удалось подключиться.<br>Правила: <code style='color:#ff8a5b'>allow read, write: if true;</code></p>";
+      }
+    })();
+
+    function renderProfile() {
+      if (!userData) return;
+      var info = calcLevel(userData.xp || 0);
+      var pct = Math.min(100, Math.round((info.currentXp / info.needed) * 100));
+      document.getElementById("profile-name").textContent = userData.name || "Игрок";
+      document.getElementById("profile-tg-id").textContent = "TG ID: " + userId;
+      document.getElementById("profile-level").textContent = info.level;
+      document.getElementById("profile-xp").textContent = (userData.xp || 0) + " XP всего";
+      document.getElementById("profile-next").textContent = "До уровня: " + (info.needed - info.currentXp) + " XP";
+      document.getElementById("xp-bar").style.width = pct + "%";
+      document.getElementById("level-ring").style.setProperty("--pct", pct + "%");
+      var maxStat = 20;
+      ["intellect", "vitality", "exploration", "craft"].forEach(function(s) {
+        var v = userData[s] || 2;
+        document.getElementById("val-" + s).textContent = v;
+        document.getElementById("stat-" + s).style.width = Math.min(100, (v / maxStat) * 100) + "%";
+      });
+      document.getElementById("header-sub").textContent = "Уровень " + info.level + " · " + userData.name;
+    }
+
+    async function processLogWithAI(body) {
+      try {
+        var text = await callGemini(
+          "Ты система памяти RPG саморазвития. Игрок написал:\n\n" + body + "\n\n" +
+          "Извлеки устойчивые факты. Верни ТОЛЬКО JSON-массив:\n" +
+          '[{"key":"тема","summary":"1-2 предложения"}]\nМакс 4. На русском.'
+        );
+        var items = JSON.parse(text);
+        if (!Array.isArray(items)) return;
+        var batch = db.batch();
+        items.forEach(function(item) {
+          if (!item.key || !item.summary) return;
+          batch.set(db.collection("attributes").doc(), {
+            userId: userId, key: String(item.key).slice(0, 80),
+            summary: String(item.summary).slice(0, 400), source: "journal",
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        });
+        await batch.commit();
+        loadLore();
+      } catch (e) { console.warn(e); }
+    }
+
+    function loadLore() {
+      db.collection("attributes").where("userId", "==", userId).limit(40).get()
+        .then(function(snap) {
+          var chips = document.getElementById("lore-chips");
+          var empty = document.getElementById("lore-empty");
+          if (snap.empty) { chips.innerHTML = ""; empty.classList.remove("hidden"); return; }
+          empty.classList.add("hidden");
+          var seen = {}, html = "", count = 0;
+          snap.docs.forEach(function(d) {
+            if (count >= 3) return;
+            var data = d.data();
+            if (seen[data.key]) return;
+            seen[data.key] = true; count++;
+            html += '<span class="attr-chip" title="' + escapeHtml(data.summary) + '">' + escapeHtml(data.key) + "</span>";
+          });
+          chips.innerHTML = html;
+        }).catch(function(e) { console.warn(e); });
+    }
+
+    document.getElementById("btn-lore-detail").onclick = async function() {
+      var body = document.getElementById("modal-lore-body");
+      body.innerHTML = '<div class="spinner"></div>';
+      openModal("modal-lore");
+      try {
+        var snap = await db.collection("attributes").where("userId", "==", userId).limit(50).get();
+        if (snap.empty) {
+          body.innerHTML = '<div class="empty">Пока нет записей лора.</div>';
+          return;
+        }
+        var html = '<div style="margin-bottom:16px">' +
+          '<div class="stat-row"><span>Интеллект</span><strong>' + (userData.intellect || 2) + '</strong></div>' +
+          '<div class="stat-row"><span>Жизненность</span><strong>' + (userData.vitality || 2) + '</strong></div>' +
+          '<div class="stat-row"><span>Исследование</span><strong>' + (userData.exploration || 2) + '</strong></div>' +
+          '<div class="stat-row"><span>Мастерство</span><strong>' + (userData.craft || 2) + '</strong></div></div>';
+        snap.docs.forEach(function(d) {
+          var data = d.data();
+          html += '<div class="lore-detail"><div class="key">' + escapeHtml(data.key) +
+            '</div><div class="summary">' + escapeHtml(data.summary) + '</div></div>';
+        });
+        body.innerHTML = html;
+      } catch (e) { body.innerHTML = '<div class="empty">Ошибка загрузки</div>'; }
+    };
+
+    /* QUOTE */
+    async function loadQuote() {
+      var cacheKey = "quote_" + userId + "_" + new Date().toISOString().slice(0, 10);
+      try {
+        var cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          var q = JSON.parse(cached);
+          document.getElementById("quote-text").textContent = "«" + q.text + "»";
+          document.getElementById("quote-author").textContent = "— " + q.author;
+          return;
+        }
+      } catch (e) {}
+      try {
+        var recent = "";
+        try {
+          var js = await db.collection("journal").where("userId", "==", userId).limit(3).get();
+          if (!js.empty) recent = js.docs.map(function(d) { return d.data().body; }).join(" ");
+        } catch (e) {}
+        var prompt =
+          "Подбери одну короткую мотивационную цитату философа или мыслителя (Сенека, Эпиктет, Марк Аврелий, Ницше, Конфуций, Аристотель и т.д.), " +
+          "которая резонирует с саморазвитием, дисциплиной, ростом. Контекст игрока: " + (recent || "работа над собой, квесты, цели") + ".\n" +
+          "Верни ТОЛЬКО JSON: {\"text\":\"цитата на русском\",\"author\":\"Имя\"}";
+        var text = await callGemini(prompt);
+        var q = JSON.parse(text);
+        document.getElementById("quote-text").textContent = "«" + q.text + "»";
+        document.getElementById("quote-author").textContent = "— " + q.author;
+        try { localStorage.setItem(cacheKey, JSON.stringify(q)); } catch (e) {}
+      } catch (e) {
+        document.getElementById("quote-text").textContent = "«Мы страдаем больше в воображении, чем в реальности.»";
+        document.getElementById("quote-author").textContent = "— Сенека";
+      }
+    }
+
+    function setupListeners() {
+      unsubscribers.forEach(function(u) { u(); });
+      unsubscribers = [];
+      unsubscribers.push(db.collection("users").doc(userId).onSnapshot(function(snap) {
+        if (snap.exists) { userData = snap.data(); renderProfile(); }
+      }));
+      loadQuestsFor(viewingUserId);
+      unsubscribers.push(db.collection("journal").orderBy("createdAt", "desc").limit(40)
+        .onSnapshot(function(snap) {
+          journalCache = snap.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
+          renderJournalPreview();
+        }, function(e) { console.warn(e); }));
+      unsubscribers.push(db.collection("activity").orderBy("createdAt", "desc").limit(100)
+        .onSnapshot(function(snap) {
+          activityCache = snap.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
+          renderStreamPreview();
+          refreshPerformance();
+        }, function(e) { console.warn(e); }));
+      loadGoalsFor(viewingGoalsUserId);
+    }
+
+    function loadQuestsFor(ownerId) {
+      db.collection("quests").where("ownerId", "==", ownerId).get()
+        .then(function(snap) {
+          var quests = snap.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
+          quests.sort(function(a, b) {
+            return ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0);
+          });
+          renderQuests(quests);
+        }).catch(function(e) { console.warn(e); });
+    }
+
+    function renderQuests(quests) {
+      var list = document.getElementById("quest-list");
+      var empty = document.getElementById("quest-empty");
+      var filtered = quests.filter(function(q) {
+        if (currentQuestTab === "active") return q.status === "active";
+        if (currentQuestTab === "available") return q.status === "available";
+        return q.status === "completed";
+      });
+      var canAct = viewingUserId === userId;
+      if (!filtered.length) { list.innerHTML = ""; empty.classList.remove("hidden"); return; }
+      empty.classList.add("hidden");
+      var catLabel = { main: "Главный", side: "Побочный", daily: "Ежедневный" };
+      list.innerHTML = filtered.map(function(q) {
+        var cat = q.category || "side";
+        var isDone = q.status === "completed";
+        var actions = "";
+        if (canAct) {
+          if (q.status === "available")
+            actions = '<button class="btn btn-sm btn-primary" onclick="acceptQuest(\'' + q.id + '\')">Принять</button>';
+          else if (q.status === "active")
+            actions = '<button class="btn btn-sm btn-accent" onclick="completeQuest(\'' + q.id + '\')">Выполнить</button>';
+          else actions = '<span class="text-sm text-muted" style="font-weight:800">Готово</span>';
+        } else {
+          actions = isDone ? '<span class="text-sm text-muted" style="font-weight:800">Готово</span>'
+            : '<span class="text-sm text-muted" style="font-weight:700">Только просмотр</span>';
+        }
+        var loc = q.location
+          ? '<div class="quest-location"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+            escapeHtml(q.location) + "</div>" : "";
+        return '<div class="quest-item ' + cat + (isDone ? " completed" : "") + '">' +
+          '<div class="quest-cat">' + (catLabel[cat] || cat) + ' квест</div>' +
+          '<div class="quest-title">' + escapeHtml(q.title) + '</div>' + loc +
+          '<div class="quest-desc">' + formatDesc(q.description) + '</div>' +
+          '<div class="quest-meta"><span class="xp-badge">' + q.xp + ' XP</span>' +
+          '<div class="flex gap-8">' + actions + '</div></div></div>';
+      }).join("");
+    }
+
+    window.acceptQuest = async function(id) {
+      if (viewingUserId !== userId) return toast("Можно принимать только свои квесты.");
+      await db.collection("quests").doc(id).update({ status: "active" });
+      toast("Квест принят. Вперёд!");
+      loadQuestsFor(userId);
+    };
+
+    window.completeQuest = async function(id) {
+      if (viewingUserId !== userId) return toast("Можно выполнять только свои квесты.");
+      var ref = db.collection("quests").doc(id);
+      var snap = await ref.get();
+      var q = snap.data();
+      if (!q || q.status !== "active") return;
+      await ref.update({ status: "completed", completedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      var stats = q.stats || {};
+      if (!q.stats || !Object.keys(q.stats).length) {
+        try {
+          var attrText = await callGemini(
+            'Квест: "' + q.title + '". Верни ТОЛЬКО JSON бустов (1-3): intellect, vitality, exploration, craft.\n{"intellect":1}'
+          );
+          stats = JSON.parse(attrText);
+        } catch (e) { stats = { intellect: 1 }; }
+      }
+      var updates = { xp: firebase.firestore.FieldValue.increment(q.xp || 0) };
+      Object.keys(stats).forEach(function(s) {
+        if (["intellect","vitality","exploration","craft"].indexOf(s) !== -1)
+          updates[s] = firebase.firestore.FieldValue.increment(Number(stats[s]) || 1);
+      });
+      await db.collection("users").doc(userId).update(updates);
+      try {
+        await db.collection("attributes").add({
+          userId: userId, key: "квест:" + (q.title || "").slice(0, 40),
+          summary: "Выполнено: " + q.title, source: "quest",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (e) {}
+      await db.collection("activity").add({
+        userId: userId, userName: userData.name, type: "quest_complete",
+        title: q.title, xp: q.xp, category: q.category, stats: stats,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showCongrats(q.title, q.xp);
+      toast("+" + q.xp + " XP · отличная работа!");
+      loadQuestsFor(userId);
+      loadLore();
+      refreshPerformance();
+    };
+
+    function showCongrats(title, xp) {
+      var slot = document.getElementById("congrats-slot");
+      var phrases = ["Ты только что стал сильнее.", "Ещё один шаг к лучшей версии себя.", "Так держать — прогресс заметен.", "Квест закрыт. Гордись собой."];
+      var phrase = phrases[Math.floor(Math.random() * phrases.length)];
+      slot.innerHTML = '<div class="congrats-banner"><h3>' + escapeHtml(phrase) + '</h3><p>«' + escapeHtml(title) + '» · +' + xp + ' XP</p></div>';
+      setTimeout(function() { slot.innerHTML = ""; }, 8000);
+    }
+
+    /* BETTER AI QUEST GENERATION */
+    document.getElementById("btn-generate-quest").onclick = async function() {
+      if (viewingUserId !== userId) return toast("Переключись на «Мои квесты».");
+      var btn = document.getElementById("btn-generate-quest");
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;margin:0"></div> Генерация...';
+      try {
+        var recentLogs = "Нет записей.";
+        try {
+          var js = await db.collection("journal").where("userId", "==", userId).limit(5).get();
+          if (!js.empty) recentLogs = js.docs.map(function(d) { return d.data().body; }).join("\n---\n");
+        } catch (e) {}
+        var loreText = "";
+        try {
+          var ls = await db.collection("attributes").where("userId", "==", userId).limit(10).get();
+          loreText = ls.docs.map(function(d) { return d.data().key + ": " + d.data().summary; }).join("\n");
+        } catch (e) {}
+        var activeGoals = "";
+        try {
+          var gs = await db.collection("goals").where("userId", "==", userId).limit(5).get();
+          activeGoals = gs.docs.filter(function(d) { return d.data().status !== "done"; })
+            .map(function(d) { return d.data().title; }).join("; ");
+        } catch (e) {}
+
+        var prompt =
+          "Ты опытный Мастер Квестов реальной RPG саморазвития. Игрок живёт в Ташкенте.\n\n" +
+          "Журнал игрока:\n" + recentLogs + "\n\n" +
+          "Известные факты (лор):\n" + (loreText || "пока мало") + "\n\n" +
+          "Активные цели:\n" + (activeGoals || "нет") + "\n\n" +
+          "Сгенерируй ОДИН свежий SIDE-квест. Варьируй типы:\n" +
+          "- Исследование города (новое кафе, парк, библиотека, рынок, музей, улица)\n" +
+          "- Социальный (разговор с незнакомцем, помощь кому-то, встреча с другом в необычном месте)\n" +
+          "- Творческий (набросок, фотосерия, короткий текст, идея продукта)\n" +
+          "- Дисциплина (цифровой детокс 2 часа, ранний подъём, холодный душ + рефлексия)\n" +
+          "- Проектный (если есть TappyStars или другой проект — маленький осмысленный шаг)\n" +
+          "- Рефлексия (письмо себе через год, разбор неудачи, список благодарностей в парке)\n\n" +
+          "Требования:\n" +
+          "- Конкретное место в Ташкенте, когда уместно\n" +
+          "- Описание с 3–5 bullet points (шаги)\n" +
+          "- Реалистично за 30–90 минут\n" +
+          "- Не повторяй «просто сходи в кафе» без изюминки\n\n" +
+          "Верни ТОЛЬКО JSON без markdown:\n" +
+          '{"title":"короткий яркий заголовок","description":"ввод + \\n- шаг1\\n- шаг2","location":"Место или «Везде»","xp":40-90,"stats":{"exploration":1}}';
+
+        var text = await callGemini(prompt);
+        var quest = JSON.parse(text);
+        await db.collection("quests").add({
+          title: quest.title, description: quest.description,
+          location: quest.location || "Ташкент", category: "side",
+          xp: quest.xp || 55, stats: quest.stats || { exploration: 1 },
+          status: "available", ownerId: userId, generatedBy: "ai",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        toast("Новый побочный квест создан!");
+        document.querySelector('.quest-tab[data-tab="available"]').click();
+        loadQuestsFor(userId);
+      } catch (e) {
+        console.error(e);
+        toast("Мастер квестов отдыхает. Попробуй позже.");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg> Сгенерировать побочный квест';
+      }
+    };
+
+    /* JOURNAL */
+    document.getElementById("btn-submit-journal").onclick = async function() {
+      var body = document.getElementById("journal-input").value.trim();
+      if (!body) return toast("Сначала напиши что-нибудь");
+      await db.collection("journal").add({
+        userId: userId, userName: userData.name, body: body,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await db.collection("users").doc(userId).update({ xp: firebase.firestore.FieldValue.increment(10) });
+      document.getElementById("journal-input").value = "";
+      toast("Запись сохранена. +10 XP · ИИ анализирует...");
+      processLogWithAI(body);
+    };
+
+    function renderJournalPreview() {
+      var feed = document.getElementById("journal-feed");
+      var empty = document.getElementById("journal-empty");
+      var btnAll = document.getElementById("btn-journal-all");
+      if (!journalCache.length) { feed.innerHTML = ""; empty.classList.remove("hidden"); btnAll.classList.add("hidden"); return; }
+      empty.classList.add("hidden");
+      btnAll.classList.toggle("hidden", journalCache.length <= 3);
+      feed.innerHTML = journalCache.slice(0, 3).map(function(e) {
+        var time = e.createdAt && e.createdAt.toDate ? e.createdAt.toDate().toLocaleString("ru-RU") : "";
+        return '<div class="log-entry"><div class="flex-between"><span class="log-author">' +
+          escapeHtml(e.userName || "Игрок") + '</span><span class="log-time">' + time +
+          '</span></div><div class="log-body">' + escapeHtml(e.body) + '</div></div>';
+      }).join("");
+    }
+
+    document.getElementById("btn-journal-all").onclick = function() {
+      var body = document.getElementById("modal-journal-body");
+      var items = journalCache.slice(0, 30);
+      body.innerHTML = items.length ? items.map(function(e, idx) {
+        var time = e.createdAt && e.createdAt.toDate ? e.createdAt.toDate().toLocaleString("ru-RU") : "";
+        var colors = ["#ffe8de", "#e8f0ff", "#e6f8ef", "#fff4e0"];
+        return '<div class="lore-detail" style="background:' + colors[idx % 4] + '">' +
+          '<div class="flex-between" style="margin-bottom:6px"><span class="key" style="margin:0">' +
+          escapeHtml(e.userName || "Игрок") + '</span><span class="log-time">' + time +
+          '</span></div><div class="summary">' + escapeHtml(e.body) + '</div></div>';
+      }).join("") : '<div class="empty">Записей нет</div>';
+      openModal("modal-journal");
+    };
+
+    /* ACTIVITY */
+    function renderStreamPreview() {
+      var stream = document.getElementById("activity-stream");
+      var empty = document.getElementById("stream-empty");
+      var btnAll = document.getElementById("btn-activity-all");
+      var items = activityCache.filter(function(i) { return i.type === "quest_complete" || i.type === "respect"; });
+      if (!items.length) { stream.innerHTML = ""; empty.classList.remove("hidden"); btnAll.classList.add("hidden"); return; }
+      empty.classList.add("hidden");
+      btnAll.classList.toggle("hidden", items.length <= 3);
+      stream.innerHTML = items.slice(0, 3).map(streamItemHtml).join("");
+    }
+    function streamItemHtml(i) {
+      var initial = (i.userName || "?")[0].toUpperCase();
+      var time = i.createdAt && i.createdAt.toDate ? i.createdAt.toDate().toLocaleString("ru-RU") : "";
+      var isMe = i.userId === userId;
+      var label = i.type === "respect" ? "Отправил уважение" : ("Выполнил <strong>" + escapeHtml(i.title) + "</strong>");
+      return '<div class="stream-item"><div class="stream-avatar">' + initial + '</div><div style="flex:1">' +
+        '<div style="font-weight:800">' + escapeHtml(i.userName) + (isMe ? " (ты)" : "") + '</div>' +
+        '<div class="text-sm" style="font-weight:600">' + label + ' · +' + i.xp + ' XP</div>' +
+        '<div class="log-time">' + time + '</div>' +
+        (!isMe && i.type === "quest_complete" ? '<button class="respect-btn" onclick="giveRespect(\'' + i.userId + '\')">Дать уважение (+15 XP)</button>' : "") +
+        '</div></div>';
+    }
+    document.getElementById("btn-activity-all").onclick = function() {
+      activityOffset = 0; renderActivityModal(); openModal("modal-activity");
+    };
+    function renderActivityModal() {
+      var body = document.getElementById("modal-activity-body");
+      var items = activityCache.filter(function(i) {
+        return i.type === "quest_complete" || i.type === "respect";
+      }).slice(0, activityOffset + 50);
+      body.innerHTML = items.length ? items.map(streamItemHtml).join("") : '<div class="empty">Пусто</div>';
+      document.getElementById("btn-activity-more").style.display =
+        activityCache.length > activityOffset + 50 ? "" : "none";
+    }
+    document.getElementById("btn-activity-more").onclick = function() {
+      activityOffset += 50; renderActivityModal();
+    };
+
+    /* GOALS SECTION */
+    function loadGoalsFor(uid) {
+      db.collection("goals").where("userId", "==", uid).get()
+        .then(function(snap) {
+          goalsCache = snap.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
+          goalsCache.sort(function(a, b) {
+            return ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0);
+          });
+          renderGoals(goalsCache, uid === userId);
+        }).catch(function(e) { console.warn(e); });
+    }
+
+    function renderGoals(goals, canEdit) {
+      var list = document.getElementById("goals-list");
+      var empty = document.getElementById("goals-empty");
+      if (!goals.length) { list.innerHTML = ""; empty.classList.remove("hidden"); return; }
+      empty.classList.add("hidden");
+      list.innerHTML = goals.map(function(g) {
+        return '<div class="goal-item' + (g.status === "done" ? " done" : "") + '">' +
+          '<div class="flex-between">' +
+          '<div class="goal-title">' + escapeHtml(g.title) + '</div>' +
+          (canEdit && g.status !== "done"
+            ? '<button class="btn btn-sm btn-ghost" onclick="completeGoal(\'' + g.id + '\')">✓</button>'
+            : (g.status === "done" ? '<span class="text-sm text-muted" style="font-weight:800">Готово</span>' : "")) +
+          '</div></div>';
+      }).join("");
+    }
+
+    document.getElementById("btn-add-goal").onclick = async function() {
+      if (viewingGoalsUserId !== userId) return toast("Добавлять цели можно только себе.");
+      var title = document.getElementById("goal-input").value.trim();
+      if (!title) return toast("Напиши цель");
+      await db.collection("goals").add({
+        userId: userId, title: title, type: "goal", status: "active",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      document.getElementById("goal-input").value = "";
+      toast("Цель добавлена");
+      loadGoalsFor(userId);
+    };
+
+    window.completeGoal = async function(id) {
+      await db.collection("goals").doc(id).update({ status: "done" });
+      await db.collection("users").doc(userId).update({ xp: firebase.firestore.FieldValue.increment(20) });
+      toast("Цель закрыта! +20 XP");
+      showCongrats("Цель достигнута", 20);
+      loadGoalsFor(userId);
+    };
+
+    document.getElementById("goals-switch-me").onclick = function() {
+      document.getElementById("goals-switch-me").classList.add("active");
+      document.getElementById("goals-switch-buddy").classList.remove("active");
+      viewingGoalsUserId = userId;
+      document.getElementById("goal-add-card").style.display = "";
+      loadGoalsFor(userId);
+    };
+    document.getElementById("goals-switch-buddy").onclick = function() {
+      if (!buddyId) {
+        discoverBuddy().then(function() {
+          if (!buddyId) return toast("Напарник ещё не присоединился.");
+          document.getElementById("goals-switch-buddy").classList.add("active");
+          document.getElementById("goals-switch-me").classList.remove("active");
+          viewingGoalsUserId = buddyId;
+          document.getElementById("goal-add-card").style.display = "none";
+          loadGoalsFor(buddyId);
+        });
+        return;
+      }
+      document.getElementById("goals-switch-buddy").classList.add("active");
+      document.getElementById("goals-switch-me").classList.remove("active");
+      viewingGoalsUserId = buddyId;
+      document.getElementById("goal-add-card").style.display = "none";
+      loadGoalsFor(buddyId);
+    };
+
+    document.querySelectorAll(".sub-tab").forEach(function(tab) {
+      tab.onclick = function() {
+        document.querySelectorAll(".sub-tab").forEach(function(t) { t.classList.remove("active"); });
+        tab.classList.add("active");
+        var sub = tab.dataset.sub;
+        document.getElementById("sub-goals-list").classList.toggle("hidden", sub !== "goals-list");
+        document.getElementById("sub-daily-plan").classList.toggle("hidden", sub !== "daily-plan");
+      };
+    });
+
+    /* DAILY PLAN */
+    function loadDailyPlan() {
+      var key = "dailyPlan_" + userId + "_" + new Date().toISOString().slice(0, 10);
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved) { dailyPlanItems = JSON.parse(saved); renderDailyPlan(); }
+      } catch (e) {}
+    }
+    function saveDailyPlan() {
+      var key = "dailyPlan_" + userId + "_" + new Date().toISOString().slice(0, 10);
+      try { localStorage.setItem(key, JSON.stringify(dailyPlanItems)); } catch (e) {}
+    }
+    function renderDailyPlan() {
+      var el = document.getElementById("daily-plan");
+      var empty = document.getElementById("plan-empty");
+      if (!dailyPlanItems.length) { el.innerHTML = ""; empty.classList.remove("hidden"); return; }
+      empty.classList.add("hidden");
+      el.innerHTML = dailyPlanItems.map(function(item, idx) {
+        return '<div class="plan-item">' +
+          '<div class="plan-check ' + (item.done ? "done" : "") + '" onclick="togglePlanItem(' + idx + ')"></div>' +
+          '<div style="flex:1;font-weight:700;color:var(--navy);' + (item.done ? "opacity:0.5;text-decoration:line-through" : "") + '">' +
+          escapeHtml(item.text) + '</div></div>';
+      }).join("");
+    }
+    window.togglePlanItem = function(idx) {
+      if (!dailyPlanItems[idx]) return;
+      dailyPlanItems[idx].done = !dailyPlanItems[idx].done;
+      saveDailyPlan();
+      renderDailyPlan();
+      if (dailyPlanItems[idx].done && dailyPlanItems.every(function(i) { return i.done; })) {
+        toast("Весь план дня выполнен! +25 XP");
+        db.collection("users").doc(userId).update({ xp: firebase.firestore.FieldValue.increment(25) });
+        showCongrats("План дня выполнен", 25);
+      }
+    };
+    document.getElementById("btn-gen-plan").onclick = async function() {
+      var btn = document.getElementById("btn-gen-plan");
+      btn.disabled = true; btn.textContent = "Составляю...";
+      try {
+        var recentLogs = "", activeGoals = "";
+        try {
+          var js = await db.collection("journal").where("userId", "==", userId).limit(3).get();
+          if (!js.empty) recentLogs = js.docs.map(function(d) { return d.data().body; }).join("\n");
+        } catch (e) {}
+        try {
+          var gs = await db.collection("goals").where("userId", "==", userId).limit(5).get();
+          activeGoals = gs.docs.filter(function(d) { return d.data().status !== "done"; })
+            .map(function(d) { return d.data().title; }).join("; ");
+        } catch (e) {}
+        var prompt =
+          "Составь реалистичный детальный план на сегодня для человека в Ташкенте (саморазвитие).\n" +
+          "Журнал:\n" + (recentLogs || "нет") + "\nЦели: " + (activeGoals || "нет") + "\n" +
+          "5–7 конкретных пунктов. Верни ТОЛЬКО JSON-массив строк на русском:\n" +
+          '["Утренний блок фокуса 60 мин","..."]';
+        var text = await callGemini(prompt);
+        var arr = JSON.parse(text);
+        dailyPlanItems = (Array.isArray(arr) ? arr : []).map(function(t) { return { text: String(t), done: false }; });
+        saveDailyPlan();
+        renderDailyPlan();
+        toast("План дня готов!");
+      } catch (e) {
+        console.error(e);
+        toast("Не удалось составить план.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Сгенерировать план дня (ИИ)";
+      }
+    };
+
+    /* PERFORMANCE */
+    async function refreshPerformance() {
+      try {
+        var weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+        var weekItems = [], totalXp = 0;
+        activityCache.forEach(function(data) {
+          if (data.type !== "quest_complete") return;
+          var t = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : null;
+          if (t && t >= weekAgo) { weekItems.push(data); totalXp += data.xp || 0; }
+        });
+        var completed = weekItems.length;
+        var score = Math.min(100, completed * 12 + Math.floor(totalXp / 20));
+        document.getElementById("perf-score").textContent = score;
+        document.getElementById("perf-completed").textContent = completed;
+        document.getElementById("perf-xp").textContent = totalXp;
+        document.getElementById("perf-streak").textContent =
+          completed >= 5 ? "Сильная" : completed >= 2 ? "Растёт" : "Начни сегодня";
+        document.getElementById("perf-label").textContent =
+          score >= 70 ? "Отличная неделя" : score >= 40 ? "Хороший темп — продолжай" : "Есть куда расти";
+        var tipsEl = document.getElementById("perf-tips");
+        var tipsEmpty = document.getElementById("perf-tips-empty");
+        if (!completed) { tipsEl.innerHTML = ""; tipsEmpty.classList.remove("hidden"); }
+        else {
+          tipsEmpty.classList.add("hidden");
+          var tips = [];
+          if (completed < 3) tips.push("Цель: минимум 3 квеста в неделю.");
+          if (totalXp < 150) tips.push("Возьми Главный квест — больше XP.");
+          if (!weekItems.some(function(i) { return i.category === "side"; }))
+            tips.push("Добавь побочный квест — прокачает Исследование.");
+          if (!weekItems.some(function(i) { return i.category === "daily"; }))
+            tips.push("Ежедневки держат серию.");
+          if (!tips.length) tips.push("Отличный баланс. Сгенерируй ИИ-квест под свой лор.");
+          tipsEl.innerHTML = tips.map(function(t) {
+            return '<div class="tip-item">' + escapeHtml(t) + '</div>';
+          }).join("");
+        }
+      } catch (e) { console.warn(e); }
+    }
+
+    window.giveRespect = async function(targetUid) {
+      if (targetUid === userId) return;
+      await db.collection("users").doc(targetUid).update({ xp: firebase.firestore.FieldValue.increment(15) });
+      await db.collection("activity").add({
+        userId: userId, userName: userData.name, type: "respect",
+        title: "Отправил уважение", xp: 15, targetId: targetUid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      toast("Уважение отправлено. +15 XP напарнику.");
+    };
+    document.getElementById("btn-respect").onclick = async function() {
+      if (!buddyId) await discoverBuddy();
+      if (!buddyId) return toast("Напарник ещё не зашёл.");
+      await giveRespect(buddyId);
+    };
+
+    document.getElementById("switch-me").onclick = function() {
+      document.getElementById("switch-me").classList.add("active");
+      document.getElementById("switch-buddy").classList.remove("active");
+      viewingUserId = userId;
+      document.getElementById("btn-generate-quest").style.display = "";
+      loadQuestsFor(userId);
+    };
+    document.getElementById("switch-buddy").onclick = function() {
+      if (!buddyId) {
+        discoverBuddy().then(function() {
+          if (!buddyId) return toast("Напарник ещё не присоединился.");
+          document.getElementById("switch-buddy").classList.add("active");
+          document.getElementById("switch-me").classList.remove("active");
+          viewingUserId = buddyId;
+          document.getElementById("btn-generate-quest").style.display = "none";
+          loadQuestsFor(buddyId);
+        });
+        return;
+      }
+      document.getElementById("switch-buddy").classList.add("active");
+      document.getElementById("switch-me").classList.remove("active");
+      viewingUserId = buddyId;
+      document.getElementById("btn-generate-quest").style.display = "none";
+      loadQuestsFor(buddyId);
+    };
+
+    document.querySelectorAll(".nav-item").forEach(function(btn) {
+      btn.onclick = function() {
+        document.querySelectorAll(".nav-item").forEach(function(b) { b.classList.remove("active"); });
+        document.querySelectorAll(".screen").forEach(function(s) { s.classList.remove("active"); });
+        btn.classList.add("active");
+        document.getElementById("screen-" + btn.dataset.screen).classList.add("active");
+        var titles = {
+          profile: "Лист персонажа", quests: "Доска квестов",
+          journal: "Журнал лора", performance: "Прогресс", goals: "Цели"
+        };
+        document.getElementById("header-title").textContent = titles[btn.dataset.screen] || "Forge Quest";
+        if (btn.dataset.screen === "performance") { refreshPerformance(); loadQuote(); }
+        if (btn.dataset.screen === "profile") loadLore();
+        if (btn.dataset.screen === "goals") loadGoalsFor(viewingGoalsUserId);
+      };
+    });
+    document.querySelectorAll(".quest-tab").forEach(function(tab) {
+      tab.onclick = function() {
+        document.querySelectorAll(".quest-tab").forEach(function(t) { t.classList.remove("active"); });
+        tab.classList.add("active");
+        currentQuestTab = tab.dataset.tab;
+        loadQuestsFor(viewingUserId);
+      };
+    });
+  </script>
+</body>
+</html>
