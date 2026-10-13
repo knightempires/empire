@@ -21,16 +21,23 @@
     * { box-sizing: border-box; margin: 0; padding: 0; -ms-overflow-style: none; scrollbar-width: none; }
     *::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
     html {
+      width: 100%;
       height: 100%;
       overflow-x: hidden;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
     body {
-      font-family: 'Nunito', system-ui, sans-serif; background: var(--bg); color: var(--text-on-dark);
-      min-height: 100%; height: auto; padding-bottom: calc(var(--nav-h) + 18px); line-height: 1.45;
-      overscroll-behavior-y: contain; font-weight: 600;
-      overflow-x: hidden; overflow-y: visible;
+      width: 100%;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text-on-dark);
+      padding-bottom: calc(var(--nav-h) + 24px);
+      font-family: 'Nunito', system-ui, sans-serif;
+      font-weight: 600;
+      line-height: 1.45;
+      overflow-x: hidden;
+      overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
     .app-header { background: var(--bg); padding: 20px 20px 14px; position: sticky; top: 0; z-index: 40; }
@@ -478,7 +485,7 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const GEMINI_KEY = "AQ.Ab8RN6IUFeecvy9Q1PweOkXEVrEqkoCvMS15wa-x_aUVnAJt7A";
+    const GEMINI_KEY = "AQ.Ab8RN6JU7hC8dmmSMOcU0XnaXEvFqa3pmRF4VLvq0vx1n6-Msg";
     const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=" + GEMINI_KEY;
     const tg = window.Telegram && window.Telegram.WebApp;
 
