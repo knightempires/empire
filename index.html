@@ -16,6 +16,7 @@
       --primary: #ff8a5b; --primary-dark: #e8744a; --primary-soft: #ffe8de;
       --navy: #1a2236; --text: #1a2236; --text-on-dark: #f0f2f7; --muted: #8b95a8;
       --border: #e8ecf4; --main: #5b8def; --side: #ffb347; --daily: #6bcb9a;
+      --goal-one: #5b8def; --goal-consist: #2d9b6a; --goal-mixed: #e05a5a;
       --shadow: 0 10px 30px rgba(10,14,23,0.12); --radius: 22px; --radius-sm: 14px; --nav-h: 74px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -ms-overflow-style: none; scrollbar-width: none; }
@@ -172,9 +173,25 @@
       background: var(--card-soft); border-radius: 14px; padding: 14px; margin-bottom: 8px;
       border-left: 4px solid var(--main);
     }
+    .goal-item.one-time { border-left-color: var(--goal-one); background: #eef4ff; }
+    .goal-item.consistency { border-left-color: var(--goal-consist); background: #e6f8ef; }
+    .goal-item.mixed { border-left-color: var(--goal-mixed); background: #ffeaea; }
     .goal-item .goal-title { font-weight: 800; color: var(--navy); font-size: 0.95rem; }
+    .goal-item .goal-type-badge {
+      display: inline-block; font-size: 0.68rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: 0.03em; padding: 3px 8px; border-radius: 999px; margin-top: 6px;
+    }
+    .goal-item.one-time .goal-type-badge { background: #d6e4ff; color: var(--goal-one); }
+    .goal-item.consistency .goal-type-badge { background: #c8f0dc; color: var(--goal-consist); }
+    .goal-item.mixed .goal-type-badge { background: #ffd0d0; color: var(--goal-mixed); }
     .goal-item.done { opacity: 0.55; }
     .goal-item.done .goal-title { text-decoration: line-through; }
+    .obstacle-item {
+      background: #fff8f0; border-radius: 14px; padding: 14px; margin-bottom: 8px;
+      border-left: 4px solid #e8a060;
+    }
+    .obstacle-item .obstacle-title { font-weight: 800; color: var(--navy); font-size: 0.95rem; }
+    .obstacle-item .obstacle-time { font-size: 0.78rem; font-weight: 700; color: #b06a20; margin-top: 4px; }
     .plan-item {
       display: flex; gap: 12px; align-items: flex-start; padding: 12px 0;
       border-bottom: 1px solid var(--border);
@@ -250,6 +267,17 @@
       display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff;
     }
     #boot-screen h1 { font-size: 1.7rem; font-weight: 900; color: var(--primary); margin-bottom: 8px; }
+    .ach-card {
+      background: linear-gradient(135deg, #fff9f0, #fff4e8);
+      border-radius: var(--radius); padding: 18px; margin-bottom: 12px;
+      box-shadow: var(--shadow); border: 1px solid #f0e0c8;
+    }
+    .ach-card .ach-title { font-weight: 900; font-size: 1.05rem; color: var(--navy); margin-bottom: 6px; }
+    .ach-card .ach-body { font-size: 0.9rem; color: #4a5568; font-weight: 600; line-height: 1.5; white-space: pre-wrap; }
+    .ach-card .ach-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    .ach-card .ach-author { font-weight: 800; color: var(--primary-dark); font-size: 0.82rem; }
+    .ach-card .ach-time { font-size: 0.72rem; color: var(--muted); font-weight: 700; }
+    .ach-header-icon { font-size: 1.4rem; margin-right: 6px; }
   </style>
 </head>
 <body>
@@ -332,21 +360,51 @@
 
     <!-- JOURNAL -->
     <section id="screen-journal" class="screen">
-      <div class="card" style="background:var(--bg-elevated);color:var(--text-on-dark);box-shadow:none;border:1px solid #1e2638">
-        <p style="font-size:0.92rem;font-weight:700;line-height:1.55;color:#c5cde0;margin:0">
-          Пиши сюда всё важное: как прошёл квест, что получилось и что нет, новые идеи, мысли о проектах, местах и привычках. Чем подробнее — тем умнее станет ИИ.
-        </p>
+      <div class="sub-tabs" style="margin-bottom:14px">
+        <button class="sub-tab active" data-jtab="logs">Записи</button>
+        <button class="sub-tab" data-jtab="achievements">Достижения</button>
       </div>
-      <div class="card">
-        <div class="card-title">Записать достижение</div>
-        <textarea id="journal-input" rows="5" placeholder="Что ты сделал? Например: 2 часа кодил TappyStars в кафе Tim's на Тараса Шевченко..."></textarea>
-        <button class="btn btn-primary btn-block mt-12" id="btn-submit-journal">Сохранить запись</button>
+
+      <div id="jtab-logs">
+        <div class="card" style="background:var(--bg-elevated);color:var(--text-on-dark);box-shadow:none;border:1px solid #1e2638">
+          <p style="font-size:0.92rem;font-weight:700;line-height:1.55;color:#c5cde0;margin:0">
+            Пиши сюда всё важное: как прошёл квест, что получилось и что нет, новые идеи, мысли о проектах, местах и привычках. Чем подробнее — тем умнее станет ИИ.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-title">Записать достижение</div>
+          <textarea id="journal-input" rows="5" placeholder="Что ты сделал? Например: 2 часа кодил TappyStars в кафе Tim's на Тараса Шевченко..."></textarea>
+          <button class="btn btn-primary btn-block mt-12" id="btn-submit-journal">Сохранить запись</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Последние записи</div>
+          <div id="journal-feed"></div>
+          <div id="journal-empty" class="empty hidden">Записей пока нет.</div>
+          <button class="see-all-btn hidden" id="btn-journal-all">Смотреть все записи</button>
+        </div>
       </div>
-      <div class="card">
-        <div class="card-title">Последние записи</div>
-        <div id="journal-feed"></div>
-        <div id="journal-empty" class="empty hidden">Записей пока нет.</div>
-        <button class="see-all-btn hidden" id="btn-journal-all">Смотреть все записи</button>
+
+      <div id="jtab-achievements" class="hidden">
+        <div class="card" style="background:linear-gradient(135deg,#1a2236,#2a354d);color:#fff;box-shadow:none">
+          <p style="font-size:0.92rem;font-weight:700;line-height:1.55;color:#c5cde0;margin:0">
+            Большие победы заслуживают отдельного места. Запиши, когда закрыл крупную цель — это вдохновляет и тебя, и напарника.
+          </p>
+        </div>
+        <div class="card" id="ach-add-card">
+          <div class="card-title"><span class="ach-header-icon">🏆</span> Большое достижение</div>
+          <textarea id="ach-input" rows="4" placeholder="Например: Наконец прочитал 20 книг за год. Или: Запустил MVP TappyStars с логином."></textarea>
+          <button class="btn btn-primary btn-block mt-12" id="btn-add-ach">Отметить достижение</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Мои достижения</div>
+          <div id="my-achievements"></div>
+          <div id="my-ach-empty" class="empty" style="padding:16px">Пока нет больших достижений.</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Достижения напарника</div>
+          <div id="buddy-achievements"></div>
+          <div id="buddy-ach-empty" class="empty" style="padding:16px">Напарник ещё не отметил достижений.</div>
+        </div>
       </div>
     </section>
 
@@ -383,35 +441,61 @@
       </div>
     </section>
 
-    <!-- GOALS (new section) -->
+    <!-- GOALS -->
     <section id="screen-goals" class="screen">
       <div class="user-switcher">
         <button class="user-switch-btn active" id="goals-switch-me">Мои цели</button>
         <button class="user-switch-btn" id="goals-switch-buddy">Напарник</button>
       </div>
+
       <div class="card" id="goal-add-card">
-        <div class="card-title">Новая цель</div>
-        <p class="text-sm text-muted mb-8" style="font-weight:600;line-height:1.55">
-          Опиши цель подробно: <strong>где ты сейчас</strong>, <strong>куда идёшь</strong> и <strong>как поймёшь, что дошёл</strong>. Чем конкретнее, тем умнее будут план дня и квесты.
-        </p>
-        <textarea id="goal-input" rows="4" placeholder="Например: Сейчас есть набросок TappyStars без авторизации. Цель: запустить MVP с логином и 1 экраном игры к 30 числу."></textarea>
-        <button class="btn btn-primary btn-block mt-12" id="btn-add-goal">Добавить цель</button>
+        <div class="sub-tabs" style="margin-bottom:12px">
+          <button class="sub-tab active" data-addtab="goal">Новая цель</button>
+          <button class="sub-tab" data-addtab="obstacle">Препятствие</button>
+        </div>
+
+        <div id="addtab-goal">
+          <p class="text-sm text-muted mb-8" style="font-weight:600;line-height:1.55">
+            Опиши цель подробно: <strong>где ты сейчас</strong>, <strong>куда идёшь</strong> и <strong>как поймёшь, что дошёл</strong>. Чем конкретнее, тем умнее будут план дня и квесты.
+          </p>
+          <textarea id="goal-input" rows="4" placeholder="Например: Сейчас есть набросок TappyStars без авторизации. Цель: запустить MVP с логином и 1 экраном игры к 30 числу."></textarea>
+          <button class="btn btn-primary btn-block mt-12" id="btn-add-goal">Добавить цель</button>
+        </div>
+
+        <div id="addtab-obstacle" class="hidden">
+          <p class="text-sm text-muted mb-8" style="font-weight:600;line-height:1.55">
+            Укажи регулярные препятствия (учёба, работа, спорт). ИИ будет учитывать их при составлении плана дня.
+          </p>
+          <textarea id="obstacle-input" rows="3" placeholder="Например: Школа с 8:00 до 13:00 по будням. Или: Работа 14:00–18:00."></textarea>
+          <button class="btn btn-accent btn-block mt-12" id="btn-add-obstacle">Добавить препятствие</button>
+        </div>
       </div>
+
       <div class="sub-tabs">
         <button class="sub-tab active" data-sub="goals-list">Цели</button>
+        <button class="sub-tab" data-sub="obstacles-list">Препятствия</button>
         <button class="sub-tab" data-sub="daily-plan">План дня</button>
       </div>
+
       <div id="sub-goals-list">
         <div class="card">
           <div id="goals-list"></div>
           <div id="goals-empty" class="empty" style="padding:16px">Пока нет целей. Добавь первую сверху.</div>
         </div>
       </div>
+
+      <div id="sub-obstacles-list" class="hidden">
+        <div class="card">
+          <div id="obstacles-list"></div>
+          <div id="obstacles-empty" class="empty" style="padding:16px">Препятствий пока нет.</div>
+        </div>
+      </div>
+
       <div id="sub-daily-plan" class="hidden">
         <div class="card">
           <div class="card-title">План на сегодня</div>
           <div id="daily-plan"></div>
-          <div id="plan-empty" class="empty" style="padding:12px">Нажми кнопку — ИИ составит детальный план дня.</div>
+          <div id="plan-empty" class="empty" style="padding:12px">Нажми кнопку — ИИ составит детальный план дня с учётом целей и препятствий.</div>
           <button class="btn btn-accent btn-block mt-12" id="btn-gen-plan">Сгенерировать план дня (ИИ)</button>
         </div>
       </div>
@@ -485,7 +569,6 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    // Cloudflare Worker proxies Gemini (keep API key only on the worker)
     const WORKER_URL = "https://forge.abrorahmeed.workers.dev/";
     const tg = window.Telegram && window.Telegram.WebApp;
 
@@ -493,7 +576,7 @@
     let buddyId = null, buddyName = "Напарник";
     let viewingUserId = null, viewingGoalsUserId = null, currentQuestTab = "active";
     let unsubscribers = [], activityCache = [], activityOffset = 0, journalCache = [];
-    let dailyPlanItems = [], goalsCache = [];
+    let dailyPlanItems = [], goalsCache = [], obstaclesCache = [], achievementsCache = [];
 
     function toast(msg) {
       var el = document.getElementById("toast");
@@ -642,6 +725,8 @@
         loadDailyPlan();
         refreshPerformance();
         loadQuote();
+        loadAchievements();
+        classifyExistingGoals();
       } catch (err) {
         console.error(err);
         document.getElementById("boot-screen").innerHTML =
@@ -670,12 +755,15 @@
       document.getElementById("header-sub").textContent = "Уровень " + info.level + " · " + userData.name;
     }
 
+    /* ========== AI MEMORY (LORE) — improved format ========== */
     async function processLogWithAI(body) {
       try {
         var text = await callGemini(
-          "Ты система памяти RPG саморазвития. Игрок написал:\n\n" + body + "\n\n" +
-          "Извлеки устойчивые факты. Верни ТОЛЬКО JSON-массив:\n" +
-          '[{"key":"тема","summary":"1-2 предложения"}]\nМакс 4. На русском.'
+          "Ты система долгосрочной памяти RPG саморазвития. Игрок написал в журнале:\n\n" + body + "\n\n" +
+          "Извлеки устойчивые, полезные факты о человеке (привычки, проекты, места, предпочтения, прогресс, сложности).\n" +
+          "НЕ пиши в формате «квест:название». Каждый факт — понятный заголовок и короткое описание.\n" +
+          "Верни ТОЛЬКО JSON-массив (макс 4):\n" +
+          '[{"key":"Короткий заголовок","summary":"1-2 предложения на русском"}]'
         );
         var items = JSON.parse(text);
         if (!Array.isArray(items)) return;
@@ -690,6 +778,26 @@
         });
         await batch.commit();
         loadLore();
+      } catch (e) { console.warn(e); }
+    }
+
+    async function processQuestMemory(q) {
+      try {
+        var text = await callGemini(
+          "Игрок только что выполнил квест:\nНазвание: " + q.title + "\nОписание: " + (q.description || "") + "\n\n" +
+          "Сформулируй 1 полезный факт о человеке на основе этого (не «квест:название»).\n" +
+          "Верни ТОЛЬКО JSON:\n" +
+          '{"key":"Короткий заголовок","summary":"1-2 предложения"}'
+        );
+        var item = JSON.parse(text);
+        if (item && item.key && item.summary) {
+          await db.collection("attributes").add({
+            userId: userId, key: String(item.key).slice(0, 80),
+            summary: String(item.summary).slice(0, 400), source: "quest",
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          loadLore();
+        }
       } catch (e) { console.warn(e); }
     }
 
@@ -735,7 +843,6 @@
         body.innerHTML = html;
       } catch (e) { body.innerHTML = '<div class="empty">Ошибка загрузки</div>'; }
     };
-
 
     document.getElementById("btn-edit-name").onclick = function() {
       document.getElementById("name-input").value = (userData && userData.name) || "";
@@ -804,6 +911,7 @@
           refreshPerformance();
         }, function(e) { console.warn(e); }));
       loadGoalsFor(viewingGoalsUserId);
+      loadObstaclesFor(viewingGoalsUserId);
     }
 
     function loadQuestsFor(ownerId) {
@@ -884,13 +992,7 @@
           updates[s] = firebase.firestore.FieldValue.increment(Number(stats[s]) || 1);
       });
       await db.collection("users").doc(userId).update(updates);
-      try {
-        await db.collection("attributes").add({
-          userId: userId, key: "квест:" + (q.title || "").slice(0, 40),
-          summary: "Выполнено: " + q.title, source: "quest",
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } catch (e) {}
+      processQuestMemory(q);
       await db.collection("activity").add({
         userId: userId, userName: userData.name, type: "quest_complete",
         title: q.title, xp: q.xp, category: q.category, stats: stats,
@@ -930,16 +1032,25 @@
         } catch (e) {}
         var activeGoals = "";
         try {
-          var gs = await db.collection("goals").where("userId", "==", userId).limit(5).get();
+          var gs = await db.collection("goals").where("userId", "==", userId).limit(8).get();
           activeGoals = gs.docs.filter(function(d) { return d.data().status !== "done"; })
-            .map(function(d) { return d.data().title; }).join("; ");
+            .map(function(d) {
+              var g = d.data();
+              return (g.goalType || "unknown") + ": " + g.title;
+            }).join("; ");
+        } catch (e) {}
+        var obstaclesText = "";
+        try {
+          var os = await db.collection("obstacles").where("userId", "==", userId).limit(10).get();
+          obstaclesText = os.docs.map(function(d) { return d.data().title; }).join("; ");
         } catch (e) {}
 
         var prompt =
           "Ты опытный Мастер Квестов реальной RPG саморазвития. Игрок живёт в Ташкенте.\n\n" +
           "Журнал игрока:\n" + recentLogs + "\n\n" +
           "Известные факты (лор):\n" + (loreText || "пока мало") + "\n\n" +
-          "Активные цели:\n" + (activeGoals || "нет") + "\n\n" +
+          "Активные цели (тип: one-time / consistency / mixed):\n" + (activeGoals || "нет") + "\n\n" +
+          "Препятствия (занятое время):\n" + (obstaclesText || "нет") + "\n\n" +
           "Сгенерируй ОДИН свежий SIDE-квест. Варьируй типы:\n" +
           "- Исследование города (новое кафе, парк, библиотека, рынок, музей, улица)\n" +
           "- Социальный (разговор с незнакомцем, помощь кому-то, встреча с другом в необычном месте)\n" +
@@ -948,6 +1059,7 @@
           "- Проектный (если есть TappyStars или другой проект — маленький осмысленный шаг)\n" +
           "- Рефлексия (письмо себе через год, разбор неудачи, список благодарностей в парке)\n\n" +
           "Требования:\n" +
+          "- Учитывай препятствия — квест должен быть реалистичен в свободное время\n" +
           "- Конкретное место в Ташкенте, когда уместно\n" +
           "- Описание с 3–5 bullet points (шаги)\n" +
           "- Реалистично за 30–90 минут\n" +
@@ -1041,12 +1153,83 @@
       openModal("modal-journal");
     };
 
+    /* JOURNAL TABS */
+    document.querySelectorAll("[data-jtab]").forEach(function(tab) {
+      tab.onclick = function() {
+        document.querySelectorAll("[data-jtab]").forEach(function(t) { t.classList.remove("active"); });
+        tab.classList.add("active");
+        var jtab = tab.dataset.jtab;
+        document.getElementById("jtab-logs").classList.toggle("hidden", jtab !== "logs");
+        document.getElementById("jtab-achievements").classList.toggle("hidden", jtab !== "achievements");
+        if (jtab === "achievements") loadAchievements();
+      };
+    });
+
+    /* ACHIEVEMENTS */
+    document.getElementById("btn-add-ach").onclick = async function() {
+      var body = document.getElementById("ach-input").value.trim();
+      if (!body || body.length < 10) return toast("Опиши достижение подробнее");
+      await db.collection("achievements").add({
+        userId: userId, userName: userData.name, body: body,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await db.collection("users").doc(userId).update({ xp: firebase.firestore.FieldValue.increment(30) });
+      await db.collection("activity").add({
+        userId: userId, userName: userData.name, type: "achievement",
+        title: body.slice(0, 60), xp: 30,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      document.getElementById("ach-input").value = "";
+      toast("Достижение отмечено! +30 XP");
+      showCongrats("Большое достижение", 30);
+      loadAchievements();
+      processLogWithAI("Большое достижение: " + body);
+    };
+
+    function loadAchievements() {
+      db.collection("achievements").orderBy("createdAt", "desc").limit(40).get()
+        .then(function(snap) {
+          achievementsCache = snap.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
+          renderAchievements();
+        }).catch(function(e) { console.warn(e); });
+    }
+
+    function renderAchievements() {
+      var myList = document.getElementById("my-achievements");
+      var myEmpty = document.getElementById("my-ach-empty");
+      var buddyList = document.getElementById("buddy-achievements");
+      var buddyEmpty = document.getElementById("buddy-ach-empty");
+      var mine = achievementsCache.filter(function(a) { return a.userId === userId; });
+      var buddy = achievementsCache.filter(function(a) { return a.userId !== userId; });
+      if (!mine.length) { myList.innerHTML = ""; myEmpty.classList.remove("hidden"); }
+      else {
+        myEmpty.classList.add("hidden");
+        myList.innerHTML = mine.map(achCardHtml).join("");
+      }
+      if (!buddy.length) { buddyList.innerHTML = ""; buddyEmpty.classList.remove("hidden"); }
+      else {
+        buddyEmpty.classList.add("hidden");
+        buddyList.innerHTML = buddy.map(achCardHtml).join("");
+      }
+    }
+
+    function achCardHtml(a) {
+      var time = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().toLocaleString("ru-RU") : "";
+      return '<div class="ach-card">' +
+        '<div class="ach-title">🏆 ' + escapeHtml((a.body || "").slice(0, 80)) + (a.body && a.body.length > 80 ? "…" : "") + '</div>' +
+        '<div class="ach-body">' + escapeHtml(a.body) + '</div>' +
+        '<div class="ach-meta"><span class="ach-author">' + escapeHtml(a.userName || "Игрок") + '</span>' +
+        '<span class="ach-time">' + time + '</span></div></div>';
+    }
+
     /* ACTIVITY */
     function renderStreamPreview() {
       var stream = document.getElementById("activity-stream");
       var empty = document.getElementById("stream-empty");
       var btnAll = document.getElementById("btn-activity-all");
-      var items = activityCache.filter(function(i) { return i.type === "quest_complete" || i.type === "respect"; });
+      var items = activityCache.filter(function(i) {
+        return i.type === "quest_complete" || i.type === "respect" || i.type === "achievement";
+      });
       if (!items.length) { stream.innerHTML = ""; empty.classList.remove("hidden"); btnAll.classList.add("hidden"); return; }
       empty.classList.add("hidden");
       btnAll.classList.toggle("hidden", items.length <= 3);
@@ -1056,7 +1239,9 @@
       var initial = (i.userName || "?")[0].toUpperCase();
       var time = i.createdAt && i.createdAt.toDate ? i.createdAt.toDate().toLocaleString("ru-RU") : "";
       var isMe = i.userId === userId;
-      var label = i.type === "respect" ? "Отправил уважение" : ("Выполнил <strong>" + escapeHtml(i.title) + "</strong>");
+      var label = i.type === "respect" ? "Отправил уважение"
+        : i.type === "achievement" ? ("Достижение: <strong>" + escapeHtml((i.title || "").slice(0, 40)) + "</strong>")
+        : ("Выполнил <strong>" + escapeHtml(i.title) + "</strong>");
       return '<div class="stream-item"><div class="stream-avatar">' + initial + '</div><div style="flex:1">' +
         '<div style="font-weight:800">' + escapeHtml(i.userName) + (isMe ? " (ты)" : "") + '</div>' +
         '<div class="text-sm" style="font-weight:600">' + label + ' · +' + i.xp + ' XP</div>' +
@@ -1070,7 +1255,7 @@
     function renderActivityModal() {
       var body = document.getElementById("modal-activity-body");
       var items = activityCache.filter(function(i) {
-        return i.type === "quest_complete" || i.type === "respect";
+        return i.type === "quest_complete" || i.type === "respect" || i.type === "achievement";
       }).slice(0, activityOffset + 50);
       body.innerHTML = items.length ? items.map(streamItemHtml).join("") : '<div class="empty">Пусто</div>';
       document.getElementById("btn-activity-more").style.display =
@@ -1080,7 +1265,45 @@
       activityOffset += 50; renderActivityModal();
     };
 
-    /* GOALS SECTION */
+    /* ========== GOALS + OBSTACLES + CLASSIFICATION ========== */
+    async function classifyGoalType(title) {
+      try {
+        var text = await callGemini(
+          "Классифицируй цель саморазвития. Верни ТОЛЬКО одно слово:\n" +
+          "one-time — цель, которую делают один раз и она закрыта (запустить MVP, сдать экзамен, прочитать конкретную книгу).\n" +
+          "consistency — требует ежедневной/регулярной работы долгое время (читать 20 книг в год, построить компанию, выучить язык, ежедневный спорт).\n" +
+          "mixed — смесь (и разовый результат, и нужна регулярность).\n\n" +
+          "Цель: " + title + "\n\nОтвет одним словом: one-time или consistency или mixed"
+        );
+        var t = String(text).toLowerCase().trim();
+        if (t.indexOf("consistency") !== -1) return "consistency";
+        if (t.indexOf("mixed") !== -1) return "mixed";
+        if (t.indexOf("one-time") !== -1 || t.indexOf("onetime") !== -1) return "one-time";
+        return "mixed";
+      } catch (e) {
+        return "mixed";
+      }
+    }
+
+    async function classifyExistingGoals() {
+      try {
+        var snap = await db.collection("goals").where("userId", "==", userId).get();
+        var batch = db.batch();
+        var needUpdate = false;
+        for (var i = 0; i < snap.docs.length; i++) {
+          var d = snap.docs[i];
+          var data = d.data();
+          if (!data.goalType) {
+            var gt = await classifyGoalType(data.title || "");
+            batch.update(d.ref, { goalType: gt });
+            needUpdate = true;
+          }
+        }
+        if (needUpdate) await batch.commit();
+        loadGoalsFor(userId);
+      } catch (e) { console.warn(e); }
+    }
+
     function loadGoalsFor(uid) {
       db.collection("goals").where("userId", "==", uid).get()
         .then(function(snap) {
@@ -1097,10 +1320,13 @@
       var empty = document.getElementById("goals-empty");
       if (!goals.length) { list.innerHTML = ""; empty.classList.remove("hidden"); return; }
       empty.classList.add("hidden");
+      var typeLabel = { "one-time": "Разовая", "consistency": "Постоянная", "mixed": "Смешанная" };
       list.innerHTML = goals.map(function(g) {
-        return '<div class="goal-item' + (g.status === "done" ? " done" : "") + '">' +
+        var gt = g.goalType || "mixed";
+        return '<div class="goal-item ' + gt + (g.status === "done" ? " done" : "") + '">' +
           '<div class="flex-between">' +
-          '<div class="goal-title">' + escapeHtml(g.title) + '</div>' +
+          '<div><div class="goal-title">' + escapeHtml(g.title) + '</div>' +
+          '<span class="goal-type-badge">' + (typeLabel[gt] || gt) + '</span></div>' +
           (canEdit && g.status !== "done"
             ? '<button class="btn btn-sm btn-ghost" onclick="completeGoal(\'' + g.id + '\')">✓</button>'
             : (g.status === "done" ? '<span class="text-sm text-muted" style="font-weight:800">Готово</span>' : "")) +
@@ -1112,13 +1338,23 @@
       if (viewingGoalsUserId !== userId) return toast("Добавлять цели можно только себе.");
       var title = document.getElementById("goal-input").value.trim();
       if (!title || title.length < 8) return toast("Опиши цель подробнее");
-      await db.collection("goals").add({
-        userId: userId, title: title, type: "goal", status: "active",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      document.getElementById("goal-input").value = "";
-      toast("Цель добавлена");
-      loadGoalsFor(userId);
+      var btn = document.getElementById("btn-add-goal");
+      btn.disabled = true; btn.textContent = "Классифицирую...";
+      try {
+        var goalType = await classifyGoalType(title);
+        await db.collection("goals").add({
+          userId: userId, title: title, type: "goal", status: "active", goalType: goalType,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById("goal-input").value = "";
+        toast("Цель добавлена · " + (goalType === "consistency" ? "постоянная" : goalType === "one-time" ? "разовая" : "смешанная"));
+        loadGoalsFor(userId);
+        processLogWithAI("Новая цель: " + title);
+      } catch (e) {
+        toast("Ошибка добавления");
+      } finally {
+        btn.disabled = false; btn.textContent = "Добавить цель";
+      }
     };
 
     window.completeGoal = async function(id) {
@@ -1129,12 +1365,69 @@
       loadGoalsFor(userId);
     };
 
+    /* OBSTACLES */
+    function loadObstaclesFor(uid) {
+      db.collection("obstacles").where("userId", "==", uid).get()
+        .then(function(snap) {
+          obstaclesCache = snap.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
+          obstaclesCache.sort(function(a, b) {
+            return ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0);
+          });
+          renderObstacles(obstaclesCache, uid === userId);
+        }).catch(function(e) { console.warn(e); });
+    }
+
+    function renderObstacles(items, canEdit) {
+      var list = document.getElementById("obstacles-list");
+      var empty = document.getElementById("obstacles-empty");
+      if (!items.length) { list.innerHTML = ""; empty.classList.remove("hidden"); return; }
+      empty.classList.add("hidden");
+      list.innerHTML = items.map(function(o) {
+        return '<div class="obstacle-item">' +
+          '<div class="flex-between">' +
+          '<div class="obstacle-title">' + escapeHtml(o.title) + '</div>' +
+          (canEdit ? '<button class="btn btn-sm btn-ghost" onclick="deleteObstacle(\'' + o.id + '\')">✕</button>' : "") +
+          '</div></div>';
+      }).join("");
+    }
+
+    document.getElementById("btn-add-obstacle").onclick = async function() {
+      if (viewingGoalsUserId !== userId) return toast("Добавлять препятствия можно только себе.");
+      var title = document.getElementById("obstacle-input").value.trim();
+      if (!title || title.length < 5) return toast("Опиши препятствие (время, место)");
+      await db.collection("obstacles").add({
+        userId: userId, title: title,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      document.getElementById("obstacle-input").value = "";
+      toast("Препятствие добавлено");
+      loadObstaclesFor(userId);
+    };
+
+    window.deleteObstacle = async function(id) {
+      await db.collection("obstacles").doc(id).delete();
+      toast("Удалено");
+      loadObstaclesFor(userId);
+    };
+
+    /* ADD TABS (goal / obstacle) */
+    document.querySelectorAll("[data-addtab]").forEach(function(tab) {
+      tab.onclick = function() {
+        document.querySelectorAll("[data-addtab]").forEach(function(t) { t.classList.remove("active"); });
+        tab.classList.add("active");
+        var at = tab.dataset.addtab;
+        document.getElementById("addtab-goal").classList.toggle("hidden", at !== "goal");
+        document.getElementById("addtab-obstacle").classList.toggle("hidden", at !== "obstacle");
+      };
+    });
+
     document.getElementById("goals-switch-me").onclick = function() {
       document.getElementById("goals-switch-me").classList.add("active");
       document.getElementById("goals-switch-buddy").classList.remove("active");
       viewingGoalsUserId = userId;
       document.getElementById("goal-add-card").style.display = "";
       loadGoalsFor(userId);
+      loadObstaclesFor(userId);
       loadDailyPlan();
     };
     
@@ -1147,6 +1440,7 @@
           viewingGoalsUserId = buddyId;
           document.getElementById("goal-add-card").style.display = "none";
           loadGoalsFor(buddyId);
+          loadObstaclesFor(buddyId);
           loadDailyPlan();
         });
         return;
@@ -1156,33 +1450,29 @@
       viewingGoalsUserId = buddyId;
       document.getElementById("goal-add-card").style.display = "none";
       loadGoalsFor(buddyId);
+      loadObstaclesFor(buddyId);
       loadDailyPlan();
     };
 
-    document.querySelectorAll(".sub-tab").forEach(function(tab) {
+    document.querySelectorAll(".sub-tab[data-sub]").forEach(function(tab) {
       tab.onclick = function() {
-        document.querySelectorAll(".sub-tab").forEach(function(t) { t.classList.remove("active"); });
+        document.querySelectorAll(".sub-tab[data-sub]").forEach(function(t) { t.classList.remove("active"); });
         tab.classList.add("active");
         var sub = tab.dataset.sub;
         document.getElementById("sub-goals-list").classList.toggle("hidden", sub !== "goals-list");
+        document.getElementById("sub-obstacles-list").classList.toggle("hidden", sub !== "obstacles-list");
         document.getElementById("sub-daily-plan").classList.toggle("hidden", sub !== "daily-plan");
       };
     });
 
-    /* DAILY PLAN (FIRESTORE SYNC) */
+    /* DAILY PLAN — smarter, includes goals + obstacles */
     async function loadDailyPlan() {
       const today = new Date().toISOString().slice(0, 10);
-      const targetUid = viewingGoalsUserId || userId; // Uses selected user (you or buddy)
-      
+      const targetUid = viewingGoalsUserId || userId;
       const el = document.getElementById("daily-plan");
       const empty = document.getElementById("plan-empty");
       const btnGen = document.getElementById("btn-gen-plan");
-      
-      // Hide generate button if viewing buddy's plan
-      if (btnGen) {
-        btnGen.style.display = (targetUid === userId) ? "" : "none";
-      }
-
+      if (btnGen) btnGen.style.display = (targetUid === userId) ? "" : "none";
       try {
         const docRef = db.collection("dailyPlans").doc(`${targetUid}_${today}`);
         const snap = await docRef.get();
@@ -1216,14 +1506,12 @@
       var el = document.getElementById("daily-plan");
       var empty = document.getElementById("plan-empty");
       var isOwner = (viewingGoalsUserId === userId);
-
       if (!dailyPlanItems.length) { 
         el.innerHTML = ""; 
         empty.classList.remove("hidden"); 
         return; 
       }
       empty.classList.add("hidden");
-
       el.innerHTML = dailyPlanItems.map(function(item, idx) {
         var checkAction = isOwner ? `onclick="togglePlanItem(${idx})"` : '';
         return '<div class="plan-item">' +
@@ -1234,13 +1522,11 @@
     }
 
     window.togglePlanItem = async function(idx) {
-      if (viewingGoalsUserId !== userId) return; // Only owner can check off items
+      if (viewingGoalsUserId !== userId) return;
       if (!dailyPlanItems[idx]) return;
-      
       dailyPlanItems[idx].done = !dailyPlanItems[idx].done;
       renderDailyPlan();
       await saveDailyPlan();
-
       if (dailyPlanItems[idx].done && dailyPlanItems.every(function(i) { return i.done; })) {
         toast("Весь план дня выполнен! +25 XP");
         db.collection("users").doc(userId).update({ xp: firebase.firestore.FieldValue.increment(25) });
@@ -1251,36 +1537,60 @@
     document.getElementById("btn-gen-plan").onclick = async function() {
       if (viewingGoalsUserId !== userId) return toast("Нельзя генерировать план для напарника.");
       var btn = document.getElementById("btn-gen-plan");
-      btn.disabled = true; btn.textContent = "Составляю...";
+      btn.disabled = true; btn.textContent = "Составляю умный план...";
       try {
-        var recentLogs = "", activeGoals = "";
+        var recentLogs = "", activeGoals = "", obstaclesText = "";
         try {
-          var js = await db.collection("journal").where("userId", "==", userId).limit(3).get();
+          var js = await db.collection("journal").where("userId", "==", userId).limit(5).get();
           if (!js.empty) recentLogs = js.docs.map(function(d) { return d.data().body; }).join("\n");
         } catch (e) {}
         try {
-          var gs = await db.collection("goals").where("userId", "==", userId).limit(5).get();
+          var gs = await db.collection("goals").where("userId", "==", userId).limit(10).get();
           activeGoals = gs.docs.filter(function(d) { return d.data().status !== "done"; })
-            .map(function(d) { return d.data().title; }).join("; ");
+            .map(function(d) {
+              var g = d.data();
+              return "[" + (g.goalType || "mixed") + "] " + g.title;
+            }).join("\n");
         } catch (e) {}
+        try {
+          var os = await db.collection("obstacles").where("userId", "==", userId).limit(10).get();
+          obstaclesText = os.docs.map(function(d) { return d.data().title; }).join("\n");
+        } catch (e) {}
+        var loreText = "";
+        try {
+          var ls = await db.collection("attributes").where("userId", "==", userId).limit(8).get();
+          loreText = ls.docs.map(function(d) { return d.data().key + ": " + d.data().summary; }).join("\n");
+        } catch (e) {}
+
         var prompt =
-          "Ты коуч по саморазвитию. Составь детальный план на СЕГОДНЯ для игрока в Ташкенте.\n\n" +
-          "Активные цели (что хочет достичь):\n" + (activeGoals || "нет явных целей") + "\n\n" +
-          "Недавние записи журнала (прогресс, что уже сделано, мысли):\n" + (recentLogs || "записей пока нет") + "\n\n" +
-          "Правила:\n" +
-          "- Учти, насколько человек уже продвинулся к целям по журналу\n" +
-          "- Дай 5–8 конкретных шагов на сегодня (время/место/действие, где уместно)\n" +
-          "- Чередуй фокус, движение, рефлексию и маленькие победы\n" +
-          "- Не давай общих советов вроде «будь продуктивным»\n\n" +
+          "Ты опытный коуч по саморазвитию и планированию. Составь реалистичный, конкретный план на СЕГОДНЯ для игрока в Ташкенте.\n\n" +
+          "=== АКТИВНЫЕ ЦЕЛИ (с типом) ===\n" +
+          "one-time = разовая цель (сделать один раз)\n" +
+          "consistency = требует регулярной ежедневной работы\n" +
+          "mixed = смесь\n\n" +
+          (activeGoals || "нет явных целей") + "\n\n" +
+          "=== ПРЕПЯТСТВИЯ (занятое время, нельзя планировать поверх) ===\n" +
+          (obstaclesText || "нет") + "\n\n" +
+          "=== ЖУРНАЛ (недавний прогресс) ===\n" +
+          (recentLogs || "записей пока нет") + "\n\n" +
+          "=== ЛОР ===\n" +
+          (loreText || "мало") + "\n\n" +
+          "ПРАВИЛА ПЛАНА:\n" +
+          "1. ОБЯЗАТЕЛЬНО учти ВСЕ активные цели. Для consistency-целей дай конкретный ежедневный шаг. Для one-time — маленький прогресс, если уместно.\n" +
+          "2. НИКОГДА не планируй задачи в часы препятствий (школа, работа и т.д.).\n" +
+          "3. Дай 5–8 конкретных шагов: время/место/действие где возможно.\n" +
+          "4. Чередуй: фокус на consistency-целях, движение/здоровье, маленький шаг по one-time, рефлексия.\n" +
+          "5. Будь реалистичным — не перегружай. Учитывай свободные окна.\n" +
+          "6. Никаких общих фраз типа «будь продуктивным». Только конкретные действия.\n\n" +
           "Верни ТОЛЬКО JSON-массив строк на русском:\n" +
-          '["Конкретный шаг 1","Конкретный шаг 2"]';
+          '["09:00–10:30 Фокус: написать 200 строк логина для TappyStars","12:00 Обед + прогулка 15 мин",...]';
+
         var text = await callGemini(prompt);
         var arr = JSON.parse(text);
         dailyPlanItems = (Array.isArray(arr) ? arr : []).map(function(t) { return { text: String(t), done: false }; });
-        
         await saveDailyPlan();
         renderDailyPlan();
-        toast("План дня готов!");
+        toast("Умный план дня готов!");
       } catch (e) {
         console.error(e);
         toast("Не удалось составить план.");
@@ -1296,7 +1606,7 @@
         var weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
         var weekItems = [], totalXp = 0;
         activityCache.forEach(function(data) {
-          if (data.type !== "quest_complete") return;
+          if (data.type !== "quest_complete" && data.type !== "achievement") return;
           var t = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : null;
           if (t && t >= weekAgo) { weekItems.push(data); totalXp += data.xp || 0; }
         });
@@ -1384,7 +1694,11 @@
         document.getElementById("header-title").textContent = titles[btn.dataset.screen] || "Forge Quest";
         if (btn.dataset.screen === "performance") { refreshPerformance(); loadQuote(); }
         if (btn.dataset.screen === "profile") loadLore();
-        if (btn.dataset.screen === "goals") loadGoalsFor(viewingGoalsUserId);
+        if (btn.dataset.screen === "goals") {
+          loadGoalsFor(viewingGoalsUserId);
+          loadObstaclesFor(viewingGoalsUserId);
+        }
+        if (btn.dataset.screen === "journal") loadAchievements();
       };
     });
     document.querySelectorAll(".quest-tab").forEach(function(tab) {
