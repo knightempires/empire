@@ -485,8 +485,8 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const GEMINI_KEY = "AQ.Ab8RN6JU7hC8dmmSMOcU0XnaXEvFqa3pmRF4VLvq0vx1n6-Msg";
-    const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=" + GEMINI_KEY;
+    // Cloudflare Worker proxies Gemini (keep API key only on the worker)
+    const WORKER_URL = "https://forge.abrorahmeed.workers.dev/";
     const tg = window.Telegram && window.Telegram.WebApp;
 
     let tgUser = null, userId = null, userData = null;
@@ -527,18 +527,33 @@
       return html || escapeHtml(text);
     }
     async function callGemini(prompt) {
-      var res = await fetch(GEMINI_URL, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.85, maxOutputTokens: 900 }
-        })
+      var res = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt })
       });
-      if (!res.ok) throw new Error("Gemini " + res.status);
-      var data = await res.json();
-      var text = (data.candidates && data.candidates[0] && data.candidates[0].content &&
-        data.candidates[0].content.parts && data.candidates[0].content.parts[0].text) || "";
-      return text.replace(/```json|```/g, "").trim();
+      var raw = await res.text();
+      var data;
+      try { data = JSON.parse(raw); } catch (e) {
+        if (!res.ok) throw new Error("Worker " + res.status + ": " + raw.slice(0, 160));
+        return String(raw).replace(/```json/gi, "").replace(/```/g, "").trim();
+      }
+      if (!res.ok || data.error) {
+        var msg = (data.error && (data.error.message || data.error)) || raw.slice(0, 160);
+        throw new Error("Worker/Gemini: " + msg);
+      }
+      var text = "";
+      if (typeof data === "string") text = data;
+      else if (data.text) text = data.text;
+      else if (data.content) text = data.content;
+      else if (data.message && typeof data.message === "string") text = data.message;
+      else if (data.candidates && data.candidates[0] && data.candidates[0].content &&
+        data.candidates[0].content.parts && data.candidates[0].content.parts[0].text)
+        text = data.candidates[0].content.parts[0].text;
+      else if (data.response) text = data.response;
+      else text = "";
+      if (!text) throw new Error("Empty AI response: " + raw.slice(0, 160));
+      return String(text).replace(/```json/gi, "").replace(/```/g, "").trim();
     }
     function openModal(id) { document.getElementById(id).classList.add("open"); }
     function closeModal(id) { document.getElementById(id).classList.remove("open"); }
@@ -941,12 +956,34 @@
           '{"title":"короткий яркий заголовок","description":"ввод + \\n- шаг1\\n- шаг2","location":"Место или «Везде»","xp":40-90,"stats":{"exploration":1}}';
 
         var text = await callGemini(prompt);
-        var quest = JSON.parse(text);
+        var quest = null;
+        try {
+          quest = JSON.parse(text);
+        } catch (parseErr) {
+          var m = String(text).match(/\{[\s\S]*\}/);
+          if (m) {
+            try { quest = JSON.parse(m[0]); } catch (e2) { quest = null; }
+          }
+        }
+        if (!quest || typeof quest !== "object") {
+          throw new Error("AI returned non-JSON: " + String(text).slice(0, 120));
+        }
+        var title = (quest.title && String(quest.title).trim()) || "Побочный квест";
+        var description = (quest.description && String(quest.description).trim()) || "Выполни небольшое задание на саморазвитие сегодня.";
+        var location = (quest.location && String(quest.location).trim()) || "Ташкент";
+        var xp = Number(quest.xp);
+        if (!xp || isNaN(xp)) xp = 55;
+        var stats = (quest.stats && typeof quest.stats === "object") ? quest.stats : { exploration: 1 };
         await db.collection("quests").add({
-          title: quest.title, description: quest.description,
-          location: quest.location || "Ташкент", category: "side",
-          xp: quest.xp || 55, stats: quest.stats || { exploration: 1 },
-          status: "available", ownerId: userId, generatedBy: "ai",
+          title: title,
+          description: description,
+          location: location,
+          category: "side",
+          xp: xp,
+          stats: stats,
+          status: "available",
+          ownerId: userId,
+          generatedBy: "ai",
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         toast("Новый побочный квест создан!");
